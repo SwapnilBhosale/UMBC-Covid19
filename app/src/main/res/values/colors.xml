@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="colorPrimary">#6200EE</color>
+    <color name="colorPrimaryDark">#3700B3</color>
+    <color name="colorAccent">#03DAC5</color>
+
+    <!-- Base theme colors -->
+
+    <color name="colorOnPrimary">#FFFFFFFF</color>
+    <color name="colorAccentOnPrimary">#FFFFFFFF</color>
+    <color name="colorSecondary">#FF0077C8</color>
+    <color name="colorStatusBar">#FF0090B0</color>
+
+    <color name="colorBackground">#FFD9E1E2</color>
+    <color name="colorOnBackground">#FF000000</color>
+
+    <!--
+        Nordic logo on splash screen.
+        When using light/dark top background, consider changing status bar to light/dark
+        in styles-v23.
+    -->
+    <color name="colorNordicLogo">#FF00A9CE</color>
+    <color name="colorNordicLogoText">#FF000000</color>
+    <color name="colorNordicLogoBottom">#FFFFFFFF</color>
+    <color name="colorNordicLogoTop">#FFD9E1E2</color>
+
+
+
+</resources>
