@@ -14,24 +14,33 @@ import android.bluetooth.BluetoothGattServerCallback;
 import android.bluetooth.BluetoothGattService;
 import android.bluetooth.BluetoothManager;
 import android.bluetooth.BluetoothProfile;
+import android.bluetooth.le.AdvertiseCallback;
+import android.bluetooth.le.AdvertiseData;
+import android.bluetooth.le.AdvertiseSettings;
+import android.bluetooth.le.BluetoothLeAdvertiser;
 import android.bluetooth.le.BluetoothLeScanner;
 import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanFilter;
 import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.ParcelUuid;
 import android.util.Log;
+import android.widget.Toast;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import edu.umbc.covid19.Constants;
@@ -47,78 +56,170 @@ public class MyBleService extends JobService {
     private Map<String,BluetoothDevice> devices;
     Handler bleHandler = new Handler();
     Context context;
+    private BluetoothManager mBluetoothManager;
+    private BluetoothGattServer mBluetoothGattServer;
+    private BluetoothLeAdvertiser mBluetoothLeAdvertiser;
+
+    /* Collection of notification subscribers */
+    private Set<BluetoothDevice> mRegisteredDevices = new HashSet<>();
 
     public MyBleService() {
         devices = new HashMap();
         this.context = this;
     }
 
-    private void startServer(){
+
+    /**
+     * Callback to receive information about the advertisement process.
+     */
+    private AdvertiseCallback mAdvertiseCallback = new AdvertiseCallback() {
+        @Override
+        public void onStartSuccess(AdvertiseSettings settingsInEffect) {
+            Log.i("TAG", "LE Advertise Started.");
+        }
+
+        @Override
+        public void onStartFailure(int errorCode) {
+            Log.w("TAG", "LE Advertise Failed: "+errorCode);
+        }
+    };
+
+    private void StartServerMode(){
         final BluetoothManager bluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
-        BluetoothGattServer server = null;
-        BluetoothGattServerCallback gattServerCallback = new BluetoothGattServerCallback() {
-            @Override
-            public void onConnectionStateChange(BluetoothDevice device, int status, int newState) {
-                super.onConnectionStateChange(device, status, newState);
-            }
-
-            @Override
-            public void onServiceAdded(int status, BluetoothGattService service) {
-                super.onServiceAdded(status, service);
-            }
-
-            @Override
-            public void onCharacteristicReadRequest(BluetoothDevice device, int requestId, int offset, BluetoothGattCharacteristic characteristic) {
-                super.onCharacteristicReadRequest(device, requestId, offset, characteristic);
-                server.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, offset, "OK");
-            }
-
-            @Override
-            public void onCharacteristicWriteRequest(BluetoothDevice device, int requestId, BluetoothGattCharacteristic characteristic, boolean preparedWrite, boolean responseNeeded, int offset, byte[] value) {
-                super.onCharacteristicWriteRequest(device, requestId, characteristic, preparedWrite, responseNeeded, offset, value);
-            }
-
-            @Override
-            public void onDescriptorReadRequest(BluetoothDevice device, int requestId, int offset, BluetoothGattDescriptor descriptor) {
-                super.onDescriptorReadRequest(device, requestId, offset, descriptor);
-            }
-
-            @Override
-            public void onDescriptorWriteRequest(BluetoothDevice device, int requestId, BluetoothGattDescriptor descriptor, boolean preparedWrite, boolean responseNeeded, int offset, byte[] value) {
-                super.onDescriptorWriteRequest(device, requestId, descriptor, preparedWrite, responseNeeded, offset, value);
-            }
-
-            @Override
-            public void onExecuteWrite(BluetoothDevice device, int requestId, boolean execute) {
-                super.onExecuteWrite(device, requestId, execute);
-            }
-
-            @Override
-            public void onNotificationSent(BluetoothDevice device, int status) {
-                super.onNotificationSent(device, status);
-            }
-        };
-        server= bluetoothManager.openGattServer(context, gattServerCallback);
-
-        BluetoothGattService service = new BluetoothGattService(UUID.fromString(Constants.UUID_SER), BluetoothGattService.SERVICE_TYPE_PRIMARY);
-        BluetoothGattCharacteristic characteristic = new BluetoothGattCharacteristic(UUID.fromString(Constants.UUID_CHAR_EID),
-                BluetoothGattCharacteristic.PROPERTY_READ | BluetoothGattCharacteristic.PROPERTY_WRITE |
-                        BluetoothGattCharacteristic.PROPERTY_NOTIFY,
-                BluetoothGattCharacteristic.PERMISSION_READ | BluetoothGattCharacteristic.PERMISSION_WRITE);
-
-        characteristic.addDescriptor(new BluetoothGattDescriptor(UUID.fromString("00002902-0000-1000-8000-00805f9b34fb"), BluetoothGattCharacteristic.PERMISSION_WRITE));
-
-        service.addCharacteristic(characteristic);
-
-        server.addService(service);
+        BluetoothAdapter bluetoothAdapter = bluetoothManager.getAdapter();
+        // Register for system Bluetooth events
+        IntentFilter filter = new IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED);
+        registerReceiver(mBluetoothReceiver, filter);
+        if (!bluetoothAdapter.isEnabled()) {
+            Log.d("TAG", "Bluetooth is currently disabled...enabling");
+            bluetoothAdapter.enable();
+        } else {
+            Log.d("TAG", "Bluetooth enabled...starting services");
+            startAdvertising();
+            startServer();
+        }
 
     }
 
 
+    /**
+     * Listens for Bluetooth adapter events to enable/disable
+     * advertising and server functionality.
+     */
+    private BroadcastReceiver mBluetoothReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            int state = intent.getIntExtra(BluetoothAdapter.EXTRA_STATE, BluetoothAdapter.STATE_OFF);
+
+            switch (state) {
+                case BluetoothAdapter.STATE_ON:
+                    startAdvertising();
+                    startServer();
+                    break;
+                case BluetoothAdapter.STATE_OFF:
+                    stopServer();
+                    stopAdvertising();
+                    break;
+                default:
+                    // Do nothing
+            }
+
+        }
+    };
+
+    /**
+     * Shut down the GATT server.
+     */
+    private void stopServer() {
+        if (mBluetoothGattServer == null) return;
+
+        mBluetoothGattServer.close();
+    }
+
+    /**
+     * Stop Bluetooth advertisements.
+     */
+    private void stopAdvertising() {
+        if (mBluetoothLeAdvertiser == null) return;
+
+        mBluetoothLeAdvertiser.stopAdvertising(mAdvertiseCallback);
+    }
+
+    /**
+     * Initialize the GATT server instance with the services/characteristics
+     * from the Time Profile.
+     */
+    private void startServer() {
+        mBluetoothGattServer = mBluetoothManager.openGattServer(this, mGattServerCallback);
+        if (mBluetoothGattServer == null) {
+            Log.w("TAG", "Unable to create GATT server");
+            return;
+        }
+
+        BluetoothGattService bluetoothGattService = new BluetoothGattService(UUID.fromString(Constants.UUID_SERVICE_PRIMARY), BluetoothGattService.SERVICE_TYPE_PRIMARY);
+
+
+        BluetoothGattCharacteristic characteristic = new BluetoothGattCharacteristic(UUID.fromString(Constants.UUID_CHAR_EID),
+                BluetoothGattCharacteristic.PROPERTY_READ | BluetoothGattCharacteristic.PROPERTY_WRITE |
+                        BluetoothGattCharacteristic.PROPERTY_NOTIFY,
+                BluetoothGattCharacteristic.PERMISSION_READ | BluetoothGattCharacteristic.PERMISSION_WRITE);
+        bluetoothGattService.addCharacteristic(characteristic);
+
+        BluetoothGattCharacteristic characteristic1 = new BluetoothGattCharacteristic(UUID.fromString(Constants.UUID_CHAR_LAT),
+                BluetoothGattCharacteristic.PROPERTY_READ | BluetoothGattCharacteristic.PROPERTY_WRITE |
+                        BluetoothGattCharacteristic.PROPERTY_NOTIFY,
+                BluetoothGattCharacteristic.PERMISSION_READ | BluetoothGattCharacteristic.PERMISSION_WRITE);
+        bluetoothGattService.addCharacteristic(characteristic1);
+
+        BluetoothGattCharacteristic characteristic2 = new BluetoothGattCharacteristic(UUID.fromString(Constants.UUID_CHAR_LNG),
+                BluetoothGattCharacteristic.PROPERTY_READ | BluetoothGattCharacteristic.PROPERTY_WRITE |
+                        BluetoothGattCharacteristic.PROPERTY_NOTIFY,
+                BluetoothGattCharacteristic.PERMISSION_READ | BluetoothGattCharacteristic.PERMISSION_WRITE);
+
+        bluetoothGattService.addCharacteristic(characteristic2);
+
+
+        mBluetoothGattServer.addService(bluetoothGattService);
+
+        // Initialize the local UI
+        //updateLocalUi(System.currentTimeMillis());
+    }
+
+    /**
+     * Begin advertising over Bluetooth that this device is connectable
+     * and supports the Current Time Service.
+     */
+    private void startAdvertising() {
+        BluetoothAdapter bluetoothAdapter = mBluetoothManager.getAdapter();
+        mBluetoothLeAdvertiser = bluetoothAdapter.getBluetoothLeAdvertiser();
+        if (mBluetoothLeAdvertiser == null) {
+            Log.w("TAG", "Failed to create advertiser");
+            return;
+        }
+
+        AdvertiseSettings settings = new AdvertiseSettings.Builder()
+                .setAdvertiseMode(AdvertiseSettings.ADVERTISE_MODE_BALANCED)
+                .setConnectable(true)
+                .setTimeout(0)
+                .setTxPowerLevel(AdvertiseSettings.ADVERTISE_TX_POWER_MEDIUM)
+                .build();
+
+        AdvertiseData data = new AdvertiseData.Builder()
+                .setIncludeDeviceName(true)
+                .setIncludeTxPowerLevel(false)
+                .addServiceUuid(new ParcelUuid(UUID.fromString(Constants.UUID_SERVICE_PRIMARY)))
+                .build();
+
+        mBluetoothLeAdvertiser
+                .startAdvertising(settings, data, mAdvertiseCallback);
+    }
+
     @Override
     public boolean onStartJob(JobParameters jobParameters) {
         Log.i("TAG", "************ sonStartJob: ");
+        mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         StartBluetoothScan();
+        //StartServerMode();
         return true;
     }
 
@@ -137,8 +238,9 @@ public class MyBleService extends JobService {
                 if (device != null && null != device.getName())
                     if (!devices.containsKey(device.getName())) {
                         devices.put(device.getName(), device);
+                        Toast.makeText(context, "Got device "+device.getName(),Toast.LENGTH_LONG);
                         Log.i("TAG", "********* onScanResult: "+device.getName());
-                        BluetoothGatt gatt = device.connectGatt(context, false, new BluetoothGattCallback() {
+                        BluetoothGatt gatt = device.connectGatt(getApplicationContext(), false, new BluetoothGattCallback() {
                             @Override
                             public void onConnectionStateChange(BluetoothGatt gatt, int status, int newState) {
                                 Log.i("TAG", "onConnectionStateChange: "+status+" "+newState);
@@ -179,7 +281,11 @@ public class MyBleService extends JobService {
 
                             @Override
                             public void onServicesDiscovered(BluetoothGatt gatt, int status) {
-                                super.onServicesDiscovered(gatt, status);
+
+                                    List<BluetoothGattService> services = gatt.getServices();
+                                    //Toast.makeText(getApplicationContext(), "Got service "+services.get(0).getCharacteristics().get(0).getUuid(), Toast.LENGTH_LONG);
+                                    services.forEach(s -> s.getCharacteristics().forEach(c -> Log.i("TAG : ", "onServicesDiscovered: " + c.getUuid())));
+
                             }
 
                             @Override
@@ -237,7 +343,7 @@ public class MyBleService extends JobService {
 
 
 
-        UUID BLP_SERVICE_UUID = UUID.fromString(Constants.UUID_SER);
+        UUID BLP_SERVICE_UUID = UUID.fromString(Constants.UUID_SERVICE_PRIMARY);
         UUID[] serviceUUIDs = new UUID[]{BLP_SERVICE_UUID};
         List<ScanFilter> filters = null;
         if(serviceUUIDs != null) {
@@ -250,7 +356,7 @@ public class MyBleService extends JobService {
             }
         }
         if (scanner != null) {
-            scanner.startScan(null, scanSettings, scanCallback);
+            scanner.startScan(filters, scanSettings, scanCallback);
             Log.d("TAG", "scan started");
         }  else {
             Log.e("TAG", "could not get scanner object");
@@ -258,4 +364,74 @@ public class MyBleService extends JobService {
 
 
     }
+
+
+    /**
+     * Callback to handle incoming requests to the GATT server.
+     * All read/write requests for characteristics and descriptors are handled here.
+     */
+    private BluetoothGattServerCallback mGattServerCallback = new BluetoothGattServerCallback() {
+
+        @Override
+        public void onConnectionStateChange(BluetoothDevice device, int status, int newState) {
+            if (newState == BluetoothProfile.STATE_CONNECTED) {
+                Log.i("TAG", "BluetoothDevice CONNECTED: " + device);
+            } else if (newState == BluetoothProfile.STATE_DISCONNECTED) {
+                Log.i("TAG", "BluetoothDevice DISCONNECTED: " + device);
+                //Remove device from any active subscriptions
+                mRegisteredDevices.remove(device);
+            }
+        }
+
+        @Override
+        public void onCharacteristicReadRequest(BluetoothDevice device, int requestId, int offset,
+                                                BluetoothGattCharacteristic characteristic) {
+            long now = System.currentTimeMillis();
+            String uuid = characteristic.getUuid().toString()
+            if (Constants.UUID_CHAR_EID.equals(uuid)) {
+                mBluetoothGattServer.sendResponse(device, requestId, GATT_SUCCESS, 0, "TEST_EID".getBytes());
+            } else if (Constants.UUID_CHAR_LAT.equals(uuid)){
+                mBluetoothGattServer.sendResponse(device, requestId, GATT_SUCCESS, 0, "TEST_LAT".getBytes());
+            }else if (Constants.UUID_CHAR_LNG.equals(uuid)){
+                mBluetoothGattServer.sendResponse(device, requestId, GATT_SUCCESS, 0, "TEST_LNG".getBytes());
+            }
+            /*if (TimeProfile.CURRENT_TIME.equals(characteristic.getUuid())) {
+                Log.i(TAG, "Read CurrentTime");
+                mBluetoothGattServer.sendResponse(device,
+                        requestId,
+                        BluetoothGatt.GATT_SUCCESS,
+                        0,
+                        TimeProfile.getExactTime(now, TimeProfile.ADJUST_NONE));
+            } else if (TimeProfile.LOCAL_TIME_INFO.equals(characteristic.getUuid())) {
+                Log.i(TAG, "Read LocalTimeInfo");
+                mBluetoothGattServer.sendResponse(device,
+                        requestId,
+                        BluetoothGatt.GATT_SUCCESS,
+                        0,
+                        TimeProfile.getLocalTimeInfo(now));
+            } else {
+                // Invalid characteristic
+                Log.w(TAG, "Invalid Characteristic Read: " + characteristic.getUuid());
+                mBluetoothGattServer.sendResponse(device,
+                        requestId,
+                        BluetoothGatt.GATT_FAILURE,
+                        0,
+                        null);
+            }*/
+        }
+
+        @Override
+        public void onDescriptorReadRequest(BluetoothDevice device, int requestId, int offset,
+                                            BluetoothGattDescriptor descriptor) {
+            super.onDescriptorReadRequest(device, requestId,offset,  descriptor);
+        }
+
+        @Override
+        public void onDescriptorWriteRequest(BluetoothDevice device, int requestId,
+                                             BluetoothGattDescriptor descriptor,
+                                             boolean preparedWrite, boolean responseNeeded,
+                                             int offset, byte[] value) {
+            super.onDescriptorWriteRequest(device, requestId, descriptor, preparedWrite, responseNeeded, offset, value);
+        }
+    };
 }
