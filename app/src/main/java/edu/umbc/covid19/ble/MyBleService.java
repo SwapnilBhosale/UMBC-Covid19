@@ -387,7 +387,7 @@ public class MyBleService extends JobService {
         public void onCharacteristicReadRequest(BluetoothDevice device, int requestId, int offset,
                                                 BluetoothGattCharacteristic characteristic) {
             long now = System.currentTimeMillis();
-            String uuid = characteristic.getUuid().toString()
+            String uuid = characteristic.getUuid().toString();
             if (Constants.UUID_CHAR_EID.equals(uuid)) {
                 mBluetoothGattServer.sendResponse(device, requestId, GATT_SUCCESS, 0, "TEST_EID".getBytes());
             } else if (Constants.UUID_CHAR_LAT.equals(uuid)){
