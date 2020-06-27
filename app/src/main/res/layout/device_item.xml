@@ -28,47 +28,49 @@
     android:id="@+id/device_container"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="?attr/colorSurface"
+
     android:paddingStart="@dimen/activity_horizontal_margin"
     android:paddingTop="@dimen/item_padding_top"
     android:paddingEnd="@dimen/activity_horizontal_margin"
     android:paddingBottom="@dimen/item_padding_bottom"
+    android:background="#8B0000"
     tools:ignore="ContentDescription">
 
     <androidx.appcompat.widget.AppCompatImageView
         android:id="@+id/icon"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+        android:layout_width="30dp"
+        android:layout_height="30dp"
         android:layout_centerVertical="true"
         android:background="@drawable/ic_device_bg"
         android:scaleType="center"
-        app:srcCompat="@drawable/ic_device_blinky"/>
+        app:srcCompat="@drawable/corona_virus"/>
 
     <com.google.android.material.textview.MaterialTextView
-        android:id="@+id/device_name"
+        android:id="@+id/eidTextView"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/activity_horizontal_margin"
         android:layout_marginEnd="@dimen/activity_horizontal_margin"
         android:layout_toStartOf="@+id/rssi"
         android:layout_toEndOf="@id/icon"
+        android:background="#8B0000"
         android:textAppearance="@style/TextAppearance.MaterialComponents.Headline5"
         android:ellipsize="end"
         android:singleLine="true"
         android:textSize="18sp"
-        tools:text="Nordic_Blinky"/>
+        tools:text="XX-XX-XX_XX-XX"/>
 
     <com.google.android.material.textview.MaterialTextView
         android:textAppearance="@style/TextAppearance.MaterialComponents.Body2"
         android:textColor="?android:attr/textColorSecondary"
-        android:id="@+id/device_address"
+        android:id="@+id/address"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/device_name"
+        android:layout_below="@+id/eidTextView"
         android:layout_marginStart="@dimen/activity_horizontal_margin"
         android:layout_marginEnd="@dimen/activity_horizontal_margin"
         android:layout_toEndOf="@id/icon"
-        tools:text="AA:BB:CC:DD:EE:FF"/>
+        tools:text="Location where contact occured"/>
 
     <androidx.appcompat.widget.AppCompatImageView
         android:id="@+id/rssi"

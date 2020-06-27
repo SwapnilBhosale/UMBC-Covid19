@@ -2,7 +2,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="edu.umbc.covid19">
 
-
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -19,23 +18,13 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
-        <receiver
-            android:name=".ble.AlarmReceiver"
-            android:enabled="true"
-            android:exported="true">
-
-        </receiver>
-
-
-        <meta-data
-            android:name="com.google.android.wearable.standalone"
-            android:value="true" />
-
         <service
             android:name=".ble.MyBleService"
             android:enabled="true"
             android:exported="true"
-            android:permission="android.permission.BIND_JOB_SERVICE" />
+            android:permission="android.permission.BIND_JOB_SERVICE">
+
+        </service>
 
         <activity android:name=".activities.SplashScreenActivity">
             <intent-filter>
@@ -44,20 +33,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-
-        <!--activity android:name=".MainActivity" />
-
-        <receiver android:name=".ble.BleServiceReceiver"/-->
-
-        <activity android:name=".MainActivity1">
-        </activity>
-
+        <activity android:name=".MainActivity"></activity>
         <activity
             android:name=".onboarding.OnboardingActivity"
             android:launchMode="singleTop" />
-
         <receiver android:name=".ble.BleServiceReceiver" >
-
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>

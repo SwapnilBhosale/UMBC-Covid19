@@ -78,10 +78,26 @@ public class MyBleService extends JobService {
     /* Collection of notification subscribers */
     private Set<BluetoothDevice> mRegisteredDevices = new HashSet<>();
 
+    private BroadcastReceiver receiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (Constants.BUTTON_CLICKED_INTENT.equals(intent.getAction())) {
+
+                boolean status = intent.getBooleanExtra(Constants.BUTTON_CLICKED_INTENT_STATUS, false);
+                Log.i("TAG", "********Service onReceive: "+status);
+                if(status){
+                    //start
+                }else{
+                    //stop
+                }
+            }
+        }
+    };
+
     public MyBleService() {
         devices = new HashMap();
         this.context = this;
-       // ephIds = new ArrayList<>();
+
     }
 
 
@@ -232,6 +248,7 @@ public class MyBleService extends JobService {
 
     @Override
     public boolean onStartJob(JobParameters jobParameters) {
+        registerReceiver(receiver, new IntentFilter(Constants.BUTTON_CLICKED_INTENT));
         Log.i("TAG", "************ sonStartJob: ");
         mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         StartBluetoothScan();

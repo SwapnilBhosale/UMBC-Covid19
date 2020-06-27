@@ -9,18 +9,23 @@
  */
 package edu.umbc.covid19;
 
+import android.app.job.JobInfo;
+import android.app.job.JobScheduler;
+import android.content.ComponentName;
 import android.content.Intent;
-import android.net.Uri;
 import android.os.Bundle;
+import android.util.Log;
+import android.widget.ListView;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
 import androidx.fragment.app.FragmentActivity;
-import androidx.lifecycle.ViewModelProvider;
 
-import edu.umbc.covid19.onboarding.OnboardingActivity;
-import edu.umbc.covid19.reports.ReportsFragment;
-import edu.umbc.covid19.viewmodel.TracingViewModel;
+import java.util.ArrayList;
+
+import edu.umbc.covid19.ble.MyBleService;
+import edu.umbc.covid19.database.DBManager;
+import edu.umbc.covid19.main.HomeFragment;
+import edu.umbc.covid19.main.ItemCustomAdapter;
 
 
 public class MainActivity extends FragmentActivity {
@@ -35,17 +40,25 @@ public class MainActivity extends FragmentActivity {
 
 	private PrefManager prefManager;
 
-	private TracingViewModel tracingViewModel;
+
+
+
 
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
-		PrefManager prefManager = new PrefManager(this);
-
-		tracingViewModel = new ViewModelProvider(this).get(TracingViewModel.class);
-		tracingViewModel.sync();
+		prefManager = new PrefManager(this);
+		showHomeFragment();
+		ComponentName serviceComponent = new ComponentName(this, MyBleService.class);
+		JobInfo.Builder builder = new JobInfo.Builder(0, serviceComponent);
+		builder.setPeriodic(16*60 * 1000);
+		JobScheduler jobScheduler = this.getSystemService(JobScheduler.class);
+		int res = jobScheduler.schedule(builder.build());
+		Log.i("", "***** schedulke jonb code : : "+res);
 	}
+
+
 
 	@Override
 	public void onResume() {
@@ -65,24 +78,18 @@ public class MainActivity extends FragmentActivity {
 		String intentAction = intent.getAction();
 		boolean launchedFromHistory = (intent.getFlags() & Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY) != 0;
 		if (ACTION_STOP_TRACING.equals(intentAction) && !launchedFromHistory) {
-			tracingViewModel.setTracingEnabled(false);
 			intent.setAction(null);
 			setIntent(intent);
 		}
-		else if (ACTION_GOTO_REPORTS.equals(intentAction) && !launchedFromHistory && !consumedExposedIntent) {
-			consumedExposedIntent = true;
-			gotoReportsFragment();
-			intent.setAction(null);
-			setIntent(intent);
-		}
+
 	}
 
 
-	private void gotoReportsFragment() {
+
+	private void showHomeFragment() {
 		getSupportFragmentManager()
 				.beginTransaction()
-				.replace(R.id.main_fragment_container, ReportsFragment.newInstance())
-				.addToBackStack(ReportsFragment.class.getCanonicalName())
+				.add(R.id.main_fragment_container, HomeFragment.newInstance())
 				.commit();
 	}
 

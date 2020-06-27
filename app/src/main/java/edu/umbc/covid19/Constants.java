@@ -8,5 +8,8 @@ public class Constants {
     public static final String UUID_CHAR_LAT = "bc4e8a32-b654-11ea-b3de-0242ac130004";
     public static final String UUID_CHAR_LNG = "bc4e8d52-b654-11ea-b3de-0242ac130004";
 
+    public static final String BUTTON_CLICKED_INTENT = "edu.umbc.covid.tracing_changed";
+    public static final String BUTTON_CLICKED_INTENT_STATUS = "edu.umbc.covid.tracing_changed_status";
+
 
 }

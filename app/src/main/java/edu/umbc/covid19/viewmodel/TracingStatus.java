@@ -13,6 +13,9 @@ public class TracingStatus {
     private List<ExposureDay> exposureDays;
 
 
+    public TracingStatus(){
+
+    }
     public TracingStatus(int numberOfContacts, boolean advertising, boolean receiving,
                          long lastSyncDate,
                          InfectionStatus infectionStatus, List<ExposureDay> exposureDays) {
