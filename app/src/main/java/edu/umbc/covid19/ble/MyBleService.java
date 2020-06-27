@@ -1,5 +1,7 @@
 package edu.umbc.covid19.ble;
 
+import android.app.AlarmManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.app.job.JobParameters;
 import android.app.job.JobService;
@@ -32,15 +34,19 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.ParcelUuid;
 import android.util.Log;
+import android.view.View;
 import android.widget.Toast;
 
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.TimeZone;
 import java.util.UUID;
 
 import edu.umbc.covid19.Constants;
@@ -59,6 +65,15 @@ public class MyBleService extends JobService {
     private BluetoothManager mBluetoothManager;
     private BluetoothGattServer mBluetoothGattServer;
     private BluetoothLeAdvertiser mBluetoothLeAdvertiser;
+    private static List<byte[]> ephIds=null;
+
+    public List<byte[]> getEphIds() {
+        return ephIds;
+    }
+
+    public static void setEphIds(List<byte[]> newEphIds) {
+        ephIds = newEphIds;
+    }
 
     /* Collection of notification subscribers */
     private Set<BluetoothDevice> mRegisteredDevices = new HashSet<>();
@@ -66,6 +81,7 @@ public class MyBleService extends JobService {
     public MyBleService() {
         devices = new HashMap();
         this.context = this;
+       // ephIds = new ArrayList<>();
     }
 
 
@@ -220,7 +236,28 @@ public class MyBleService extends JobService {
         mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         StartBluetoothScan();
         //StartServerMode();
+        scheduleAlarm();
         return true;
+    }
+    public void scheduleAlarm() {
+        // time at which alarm will be scheduled here alarm is scheduled at 1 day from current time,
+        // we fetch  the current time in milliseconds and added 1 day time
+        // i.e. 24*60*60*1000= 86,400,000   milliseconds in a day
+         Long time = new GregorianCalendar().getTimeInMillis()+60*1000;
+        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("EST"));
+        calendar.set(Calendar.HOUR_OF_DAY, 13);
+        calendar.set(Calendar.SECOND,0);
+        calendar.set(Calendar.MINUTE,46);
+        // create an Intent and set the class which will execute when Alarm triggers, here we have
+        // given AlarmReciever in the Intent, the onRecieve() method of this class will execute when
+        // alarm triggers and
+        //we call the method inside onRecieve() method pf Alarmreciever class
+        Intent intentAlarm = new Intent(this, AlarmReceiver.class);
+        // create the object
+        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
+        //set the alarm for particular time
+        alarmManager.setRepeating(AlarmManager.RTC_WAKEUP,time,AlarmManager.INTERVAL_FIFTEEN_MINUTES,  PendingIntent.getBroadcast(this,1,  intentAlarm, PendingIntent.FLAG_UPDATE_CURRENT));
+        //Toast.makeText(this, "Alarm Scheduled ", Toast.LENGTH_LONG).show();
     }
 
     @Override
@@ -372,6 +409,7 @@ public class MyBleService extends JobService {
      */
     private BluetoothGattServerCallback mGattServerCallback = new BluetoothGattServerCallback() {
 
+        private int counter = 0;
         @Override
         public void onConnectionStateChange(BluetoothDevice device, int status, int newState) {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
@@ -387,37 +425,22 @@ public class MyBleService extends JobService {
         public void onCharacteristicReadRequest(BluetoothDevice device, int requestId, int offset,
                                                 BluetoothGattCharacteristic characteristic) {
             long now = System.currentTimeMillis();
+
+            //super call
+            super.onCharacteristicReadRequest(device, requestId, offset, characteristic);
             String uuid = characteristic.getUuid().toString();
+
             if (Constants.UUID_CHAR_EID.equals(uuid)) {
-                mBluetoothGattServer.sendResponse(device, requestId, GATT_SUCCESS, 0, "TEST_EID".getBytes());
-            } else if (Constants.UUID_CHAR_LAT.equals(uuid)){
+                //sending final response
+                counter++;
+                counter = counter<24?counter:0;
+                byte[] ephId = ephIds.get(counter);
+                mBluetoothGattServer.sendResponse(device, requestId, GATT_SUCCESS, 0, ephId);
+            }else if (Constants.UUID_CHAR_LAT.equals(uuid)){
                 mBluetoothGattServer.sendResponse(device, requestId, GATT_SUCCESS, 0, "TEST_LAT".getBytes());
             }else if (Constants.UUID_CHAR_LNG.equals(uuid)){
                 mBluetoothGattServer.sendResponse(device, requestId, GATT_SUCCESS, 0, "TEST_LNG".getBytes());
             }
-            /*if (TimeProfile.CURRENT_TIME.equals(characteristic.getUuid())) {
-                Log.i(TAG, "Read CurrentTime");
-                mBluetoothGattServer.sendResponse(device,
-                        requestId,
-                        BluetoothGatt.GATT_SUCCESS,
-                        0,
-                        TimeProfile.getExactTime(now, TimeProfile.ADJUST_NONE));
-            } else if (TimeProfile.LOCAL_TIME_INFO.equals(characteristic.getUuid())) {
-                Log.i(TAG, "Read LocalTimeInfo");
-                mBluetoothGattServer.sendResponse(device,
-                        requestId,
-                        BluetoothGatt.GATT_SUCCESS,
-                        0,
-                        TimeProfile.getLocalTimeInfo(now));
-            } else {
-                // Invalid characteristic
-                Log.w(TAG, "Invalid Characteristic Read: " + characteristic.getUuid());
-                mBluetoothGattServer.sendResponse(device,
-                        requestId,
-                        BluetoothGatt.GATT_FAILURE,
-                        0,
-                        null);
-            }*/
         }
 
         @Override
@@ -433,5 +456,7 @@ public class MyBleService extends JobService {
                                              int offset, byte[] value) {
             super.onDescriptorWriteRequest(device, requestId, descriptor, preparedWrite, responseNeeded, offset, value);
         }
+
+
     };
 }
