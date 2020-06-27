@@ -24,6 +24,8 @@ public class PrefManager {
     private static final String KEY_NAME = "name";
     private static final String KEY_SESSION_KEY = "sessionKey";
 
+    private static final String KEY_IS_ONBOARDING_COMPLETED = "isOnboarded";
+
 
     public PrefManager(Context context) {
         this._context = context;
@@ -65,6 +67,18 @@ public class PrefManager {
     }
 
     public String getSessionKey(){
-        return pref.getString(KEY_SESSION_KEY,"");
+        return pref.getString(KEY_IS_LOGGED_IN,"");
     }
+
+    public void setIsOnboardingCompleted(boolean key){
+        editor.putBoolean(KEY_IS_ONBOARDING_COMPLETED,key);
+        editor.commit();
+    }
+
+    public boolean getIsOnboardingCompleted(){
+        return pref.getBoolean(KEY_IS_ONBOARDING_COMPLETED,false);
+    }
+
+
+
 }
