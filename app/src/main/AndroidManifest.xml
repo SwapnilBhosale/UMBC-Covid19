@@ -22,7 +22,9 @@
         <receiver
             android:name=".ble.AlarmReceiver"
             android:enabled="true"
-            android:exported="true"></receiver>
+            android:exported="true">
+
+        </receiver>
 
 
         <meta-data
@@ -42,9 +44,20 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".MainActivity" />
 
-        <receiver android:name=".ble.BleServiceReceiver">
+        <!--activity android:name=".MainActivity" />
+
+        <receiver android:name=".ble.BleServiceReceiver"/-->
+
+        <activity android:name=".MainActivity1">
+        </activity>
+
+        <activity
+            android:name=".onboarding.OnboardingActivity"
+            android:launchMode="singleTop" />
+
+        <receiver android:name=".ble.BleServiceReceiver" >
+
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
             </intent-filter>

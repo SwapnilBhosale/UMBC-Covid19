@@ -38,7 +38,7 @@ import java.util.List;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
-import edu.umbc.covid19.MainActivity;
+import edu.umbc.covid19.MainActivity1;
 import edu.umbc.covid19.R;
 import edu.umbc.covid19.viewmodels.DevicesLiveData;
 
@@ -57,7 +57,7 @@ public class DevicesAdapter extends RecyclerView.Adapter<DevicesAdapter.ViewHold
 		onItemClickListener = listener;
 	}
 
-	public DevicesAdapter(@NonNull final MainActivity activity,
+	public DevicesAdapter(@NonNull final MainActivity1 activity,
 						  @NonNull final DevicesLiveData devicesLiveData) {
 		setHasStableIds(true);
 		devicesLiveData.observe(activity, newDevices -> {
