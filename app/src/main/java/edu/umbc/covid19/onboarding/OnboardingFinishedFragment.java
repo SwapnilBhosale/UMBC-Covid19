@@ -16,7 +16,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 
-import edu.umbc.android.app.R;
+import edu.umbc.covid19.R;
+
 
 public class OnboardingFinishedFragment extends Fragment {
 
