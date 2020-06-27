@@ -8,6 +8,7 @@ import android.os.Bundle;
 import android.os.Handler;
 
 import edu.umbc.covid19.MainActivity;
+import edu.umbc.covid19.MainActivity1;
 import edu.umbc.covid19.R;
 import edu.umbc.covid19.PrefManager;
 import edu.umbc.covid19.onboarding.OnboardingActivity;
