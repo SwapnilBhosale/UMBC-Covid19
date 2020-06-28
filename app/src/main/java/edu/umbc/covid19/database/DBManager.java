@@ -28,7 +28,7 @@ public class DBManager {
         dbHelper.close();
     }
 
-    public void insert(String eid, String lat, String lng, String timestamp, String rssi) {
+    public void insert(String eid, String lat, String lng, String rssi) {
         ContentValues contentValue = new ContentValues();
         contentValue.put(DatabaseHelper.EID, eid);
         contentValue.put(DatabaseHelper.LAT, lat);
@@ -38,13 +38,27 @@ public class DBManager {
         database.insert(DatabaseHelper.TABLE_NAME, null, contentValue);
     }
 
-    public Cursor fetch(Long time) {
-        String[] columns = new String[] { DatabaseHelper._ID, DatabaseHelper.EID, DatabaseHelper.LAT, DatabaseHelper.LNG,  DatabaseHelper.RSSI, DatabaseHelper.TIMESTAMP};
+    public Cursor fetchKeys() {
         Cursor cursor = database.rawQuery("SELECT * FROM "+DatabaseHelper.TABLE_NAME+" WHERE "+DatabaseHelper.TIMESTAMP +" > datetime('now', '-1 day')", null);
         if (cursor != null) {
             cursor.moveToFirst();
         }
         return cursor;
+    }
+
+    public Cursor getEphIds(){
+        Cursor cursor = database.rawQuery("SELECT * FROM "+DatabaseHelper.E_KEYS_TABLE_NAME+" WHERE "+DatabaseHelper.TIMESTAMP +" > datetime('now', '-1 day')", null);
+        if (cursor != null) {
+            cursor.moveToFirst();
+        }
+        return cursor;
+    }
+
+    public void insertEKeys(String keys) {
+        ContentValues contentValue = new ContentValues();
+        contentValue.put(DatabaseHelper.EID, keys);
+        contentValue.put(DatabaseHelper.TIMESTAMP,String.valueOf(System.currentTimeMillis()) );
+        database.insert(DatabaseHelper.E_KEYS_TABLE_NAME, null, contentValue);
     }
 
 

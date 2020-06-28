@@ -20,6 +20,7 @@ import android.provider.Settings;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
 import android.widget.CompoundButton;
 import android.widget.ListView;
 import android.widget.ScrollView;
@@ -32,8 +33,20 @@ import androidx.core.app.NotificationManagerCompat;
 import androidx.fragment.app.Fragment;
 
 
-import java.util.ArrayList;
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+
+import edu.umbc.covid19.Constants;
 import edu.umbc.covid19.PrefManager;
 import edu.umbc.covid19.R;
 import edu.umbc.covid19.database.DBManager;
@@ -46,6 +59,7 @@ public class HomeFragment extends Fragment {
 
 	private ScrollView scrollView;
 	private Switch vSwitch;
+	private Button infectedButton;
 
 
 	private PrefManager prefManager;
@@ -72,9 +86,44 @@ public class HomeFragment extends Fragment {
 	}
 
 	public void initView(){
+		infectedButton = getView().findViewById(R.id.infectedButton);
+		if (prefManager.getIsReported()){
+			infectedButton.setEnabled(false);
+		}
 		list_view = (ListView) getView().findViewById(R.id.list1);
 		itemCustomAdapter = new ItemCustomAdapter(new ArrayList<>(), getActivity());
 		list_view.setAdapter(itemCustomAdapter);
+		RequestQueue queue = Volley.newRequestQueue(getActivity());
+		infectedButton.setOnClickListener(new View.OnClickListener() {
+			@Override
+			public void onClick(View view) {
+
+				Log.i("TAG", "******** onClick: i am infecyted clicked");
+				try{
+					JSONObject object = new JSONObject();
+					object.put("public_key", prefManager.getDailySecretKey());
+					JsonObjectRequest request = new JsonObjectRequest(Request.Method.POST, Constants.DP3T_SERVER_URL+"addInfected", object, new Response.Listener<JSONObject>() {
+						@Override
+						public void onResponse(JSONObject response) {
+
+							prefManager.setIsReported(true);
+							infectedButton.setEnabled(false);
+						}
+					}, new Response.ErrorListener() {
+						@Override
+						public void onErrorResponse(VolleyError error) {
+							Log.i("TAG", "******** onErrorResponse: post call error: "+error.getMessage());
+						}
+					});
+					queue.add(request);
+					queue.start();
+
+				}catch (Exception e){
+					Log.i("TAG", "onClick: im infecrted "+e.getMessage());
+				}
+
+			}
+		});
 	}
 
 
@@ -82,7 +131,7 @@ public class HomeFragment extends Fragment {
 	@Override
 	public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
 
-		scrollView = view.findViewById(R.id.home_scroll_view);
+
 		vSwitch = view.findViewById(R.id.switch1);
 		initView();
 		vSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {

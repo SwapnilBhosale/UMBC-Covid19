@@ -35,7 +35,7 @@
     <color name="navigation_deselected">@color/grey_dark</color>
     <color name="navigation_background">@color/white</color>
     <color name="navigation_icon_toolbar">@color/anthracite</color>
-
+    <color name="maroon">#8B0000</color>
     <color name="anthracite">#535263</color>
     <color name="grey_dark">#cdcdd0</color>
     <color name="grey_dark_lighter">#DFDFDF</color>

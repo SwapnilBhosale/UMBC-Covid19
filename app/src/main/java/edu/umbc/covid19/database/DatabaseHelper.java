@@ -8,6 +8,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
     // Table Name
     public static final String TABLE_NAME = "encounters";
+    public static final String E_KEYS_TABLE_NAME = "eid_table";
 
     // Table columns
     public static final String _ID = "_id";
@@ -16,6 +17,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     public static final String LNG = "lng";
     public static final String TIMESTAMP = "timestamp";
     public static final String RSSI = "rssi";
+
 
 
     // Database Information
@@ -28,6 +30,9 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String CREATE_TABLE = "create table " + TABLE_NAME + "(" + _ID
             + " INTEGER PRIMARY KEY AUTOINCREMENT, " + EID + " TEXT NOT NULL, " + LAT + " TEXT, "+ LNG+" TEXT, "+RSSI+" TEXT, "+TIMESTAMP+" DATETIME);";
 
+    private static final String CREATE_KEYS_TABLE = "create table" +E_KEYS_TABLE_NAME+ "("+_ID+" INTEGER PRIMARY KEY AUTOINCREMENT, "+EID+" TEXT NOT NULL, " + TIMESTAMP+" DATETIME);";
+
+
     public DatabaseHelper(Context context) {
         super(context, DB_NAME, null, DB_VERSION);
     }
@@ -35,6 +40,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     @Override
     public void onCreate(SQLiteDatabase db) {
         db.execSQL(CREATE_TABLE);
+        db.execSQL(CREATE_KEYS_TABLE);
     }
 
     @Override
@@ -42,5 +48,4 @@ public class DatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("DROP TABLE IF EXISTS " + TABLE_NAME);
         onCreate(db);
     }
-
 }

@@ -3,8 +3,10 @@ package edu.umbc.covid19.ble;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.database.Cursor;
 import android.util.Log;
 
+import java.nio.charset.StandardCharsets;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.Key;
@@ -14,6 +16,7 @@ import java.security.SecureRandom;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -23,6 +26,10 @@ import javax.crypto.NoSuchPaddingException;
 import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 
+import edu.umbc.covid19.PrefManager;
+import edu.umbc.covid19.database.DBManager;
+import edu.umbc.covid19.database.DatabaseHelper;
+
 public class AlarmReceiver extends BroadcastReceiver {
     private static final String BROADCAST_KEY= "broadcast key";
     private static final int NUM_EPOCHS_PER_DAY = 24;
@@ -30,15 +37,40 @@ public class AlarmReceiver extends BroadcastReceiver {
     private static final int LENGTH_EPHID = 16;
     static List<byte[]> ephIds=null;
 
+
+
+    private static final char[] HEX_ARRAY = "0123456789ABCDEF".toCharArray();
+    public String bytesToHex(byte[] bytes) {
+        char[] hexChars = new char[bytes.length * 2];
+        for (int j = 0; j < bytes.length; j++) {
+            int v = bytes[j] & 0xFF;
+            hexChars[j * 2] = HEX_ARRAY[v >>> 4];
+            hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
+        }
+        return new String(hexChars);
+    }
+
     @Override
     public void onReceive(Context context, Intent intent) {
-        ephIds = new ArrayList<>();
-        byte[] day_key = generateNewDayKey();
-        Log.i("Alarm recieved", "KEY created for day : "+day_key.toString());
-        getEphIDsForDay(day_key);
-        Log.i("EPHID count: ", String.valueOf(ephIds.size()));
-        Log.i("First EPHID: ",ephIds.get(0).toString());
-        MyBleService.setEphIds(ephIds);
+        DBManager manager = new DBManager(context);
+        PrefManager prefManager = new PrefManager(context);
+        Cursor c = manager.getEphIds();
+        if(c!=null && c.getCount() == 0){
+            ephIds = new ArrayList<>();
+            byte[] day_key = generateNewDayKey();
+            Log.i("Alarm recieved", "KEY created for day : "+day_key.toString());
+            getEphIDsForDay(day_key);
+            Log.i("EPHID count: ", String.valueOf(ephIds.size()));
+            Log.i("First EPHID: ",ephIds.get(0).toString());
+            MyBleService.setEphIds(ephIds);
+
+            String listString = ephIds.stream().map(this::bytesToHex).collect(Collectors.joining(" "));
+            manager.insertEKeys(listString);
+            prefManager.setDailySecretKey(bytesToHex(day_key));
+
+        }
+
+
     }
     public static byte[] generateNewDayKey() {
         SecureRandom random = new SecureRandom();

@@ -6,7 +6,7 @@ public class InfectStatus {
     private String eid;
     private String lat;
     private String lng;
-    private String timestamp;
+    private Long timestamp;
 
     public String getId() {
         return id;
@@ -40,11 +40,11 @@ public class InfectStatus {
         this.lng = lng;
     }
 
-    public String getTimestamp() {
+    public Long getTimestamp() {
         return timestamp;
     }
 
-    public void setTimestamp(String timestamp) {
+    public void setTimestamp(Long timestamp) {
         this.timestamp = timestamp;
     }
 }
