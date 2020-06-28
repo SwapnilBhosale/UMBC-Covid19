@@ -7,6 +7,7 @@ public class InfectStatus {
     private String lat;
     private String lng;
     private Long timestamp;
+    private String rssi;
 
     public String getId() {
         return id;
@@ -46,5 +47,13 @@ public class InfectStatus {
 
     public void setTimestamp(Long timestamp) {
         this.timestamp = timestamp;
+    }
+
+    public String getRssi() {
+        return rssi;
+    }
+
+    public void setRssi(String rssi) {
+        this.rssi = rssi;
     }
 }

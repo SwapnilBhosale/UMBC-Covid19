@@ -240,6 +240,7 @@ public class MyBleService extends JobService  implements LocationListener {
             status.setLat(c.getString(c.getColumnIndex(DatabaseHelper.LAT)));
             status.setLng(c.getString(c.getColumnIndex(DatabaseHelper.LNG)));
             status.setTimestamp(Long.valueOf(c.getString(c.getColumnIndex(DatabaseHelper.TIMESTAMP))));
+            status.setRssi(c.getString(c.getColumnIndex(DatabaseHelper.RSSI)));
             Log.i("TAG", "checkIfInfected: in first");
             statuses.add(status);
 
