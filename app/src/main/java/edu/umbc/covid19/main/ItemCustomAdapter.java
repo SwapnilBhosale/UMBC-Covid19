@@ -62,7 +62,7 @@ public class ItemCustomAdapter extends BaseAdapter {
         }
 
         viewHolder.text_view.setText(dataSet.get(pos).getEid());
-        viewHolder.text_view_1.setText(dataSet.get(pos).getTimestamp());
+        viewHolder.text_view_1.setText(String.valueOf(dataSet.get(pos).getTimestamp()));
         return vi;
     }
 
