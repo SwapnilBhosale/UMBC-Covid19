@@ -436,7 +436,7 @@ public class MyBleService extends JobService  implements LocationListener {
         scheduleAlarm();
         getLocation();
         Log.i("TAG", "************ sonStartJob: ");
-        scheduleAlarm();
+        //scheduleAlarm();
         mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
 
@@ -448,11 +448,11 @@ public class MyBleService extends JobService  implements LocationListener {
         // time at which alarm will be scheduled here alarm is scheduled at 1 day from current time,
         // we fetch  the current time in milliseconds and added 1 day time
         // i.e. 24*60*60*1000= 86,400,000   milliseconds in a day
-         Long time = new GregorianCalendar().getTimeInMillis()+60*1000;
+        Long time = new GregorianCalendar().getTimeInMillis()+60*1000;
         Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("EST"));
-        calendar.set(Calendar.HOUR_OF_DAY, 13);
+        calendar.set(Calendar.HOUR_OF_DAY, 23);
         calendar.set(Calendar.SECOND,0);
-        calendar.set(Calendar.MINUTE,46);
+        calendar.set(Calendar.MINUTE,58);
         // create an Intent and set the class which will execute when Alarm triggers, here we have
         // given AlarmReciever in the Intent, the onRecieve() method of this class will execute when
         // alarm triggers and
@@ -461,12 +461,15 @@ public class MyBleService extends JobService  implements LocationListener {
         // create the object
         AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
         //set the alarm for particular time
-        alarmManager.setRepeating(AlarmManager.RTC_WAKEUP,time,AlarmManager.INTERVAL_FIFTEEN_MINUTES,  PendingIntent.getBroadcast(this,1,  intentAlarm, PendingIntent.FLAG_UPDATE_CURRENT));
+        alarmManager.setRepeating(AlarmManager.RTC_WAKEUP,System.currentTimeMillis()+5000,AlarmManager.INTERVAL_FIFTEEN_MINUTES,  PendingIntent.getBroadcast(this,1,  intentAlarm, PendingIntent.FLAG_UPDATE_CURRENT));
         //Toast.makeText(this, "Alarm Scheduled ", Toast.LENGTH_LONG).show();
+        Log.i("TAG", "###### scheduleAlarm: scheduled");
+
     }
 
     @Override
     public boolean onStopJob(JobParameters jobParameters) {
+        unregisterReceiver(mBluetoothReceiver);
         return true;
     }
 

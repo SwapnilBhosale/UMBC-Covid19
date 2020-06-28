@@ -13,6 +13,7 @@ public class Constants {
     public static final String BUTTON_CLICKED_INTENT = "edu.umbc.covid.tracing_changed";
     public static final String BUTTON_CLICKED_INTENT_STATUS = "edu.umbc.covid.tracing_changed_status";
     public static final String DP3T_SERVER_URL = "http://10.0.0.73:8080/";
+    public static final String INFECTED_ACTION = "infected_action";
 
 
 }
