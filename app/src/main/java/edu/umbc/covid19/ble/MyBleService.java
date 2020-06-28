@@ -1,6 +1,9 @@
 package edu.umbc.covid19.ble;
 
+import android.Manifest;
+import android.app.Activity;
 import android.app.AlarmManager;
+import android.app.AlertDialog;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.app.job.JobParameters;
@@ -27,15 +30,24 @@ import android.bluetooth.le.ScanResult;
 import android.bluetooth.le.ScanSettings;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.Build;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.ParcelUuid;
+import android.provider.Settings;
 import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
 
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -48,6 +60,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 import edu.umbc.covid19.Constants;
 import edu.umbc.covid19.utils.ScheduleUtil;
@@ -58,7 +71,7 @@ import static android.bluetooth.BluetoothDevice.BOND_NONE;
 import static android.bluetooth.BluetoothDevice.TRANSPORT_LE;
 import static android.bluetooth.BluetoothGatt.GATT_SUCCESS;
 
-public class MyBleService extends JobService {
+public class MyBleService extends JobService  implements LocationListener {
     private Map<String,BluetoothDevice> devices;
     Handler bleHandler = new Handler();
     Context context;
@@ -66,6 +79,25 @@ public class MyBleService extends JobService {
     private BluetoothGattServer mBluetoothGattServer;
     private BluetoothLeAdvertiser mBluetoothLeAdvertiser;
     private static List<byte[]> ephIds=null;
+    LocationManager locationManager;
+    // flag for GPS status
+    boolean isGPSEnabled = false;
+
+    // flag for network status
+    boolean isNetworkEnabled = false;
+
+    // flag for GPS status
+    boolean canGetLocation = false;
+
+    Location location; // location
+    double latitude; // latitude
+    double longitude; // longitude
+
+    // The minimum distance to change Updates in meters
+    private static final long MIN_DISTANCE_CHANGE_FOR_UPDATES = 10; // 10 meters
+
+    // The minimum time between updates in milliseconds
+    private static final long MIN_TIME_BW_UPDATES = 1000 * 60 * 1; // 1 minute
 
     public List<byte[]> getEphIds() {
         return ephIds;
@@ -87,8 +119,11 @@ public class MyBleService extends JobService {
                 Log.i("TAG", "********Service onReceive: "+status);
                 if(status){
                     //start
+                    startAdvertising();
+                    startServer();
                 }else{
-                    //stop
+                    stopAdvertising();
+                    stopServer();
                 }
             }
         }
@@ -251,6 +286,7 @@ public class MyBleService extends JobService {
         registerReceiver(receiver, new IntentFilter(Constants.BUTTON_CLICKED_INTENT));
         Log.i("TAG", "************ sonStartJob: ");
         mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
+        locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
         StartBluetoothScan();
         //StartServerMode();
         scheduleAlarm();
@@ -426,7 +462,6 @@ public class MyBleService extends JobService {
      */
     private BluetoothGattServerCallback mGattServerCallback = new BluetoothGattServerCallback() {
 
-        private int counter = 0;
         @Override
         public void onConnectionStateChange(BluetoothDevice device, int status, int newState) {
             if (newState == BluetoothProfile.STATE_CONNECTED) {
@@ -447,16 +482,17 @@ public class MyBleService extends JobService {
             super.onCharacteristicReadRequest(device, requestId, offset, characteristic);
             String uuid = characteristic.getUuid().toString();
 
+            String lat = String.valueOf(getLatitude());
+            String lng = String.valueOf(getLongitude());
             if (Constants.UUID_CHAR_EID.equals(uuid)) {
                 //sending final response
-                counter++;
-                counter = counter<24?counter:0;
-                byte[] ephId = ephIds.get(counter);
+                int randomNum = ThreadLocalRandom.current().nextInt(0, 23 );
+                byte[] ephId = ephIds.get(randomNum);
                 mBluetoothGattServer.sendResponse(device, requestId, GATT_SUCCESS, 0, ephId);
             }else if (Constants.UUID_CHAR_LAT.equals(uuid)){
-                mBluetoothGattServer.sendResponse(device, requestId, GATT_SUCCESS, 0, "TEST_LAT".getBytes());
+                mBluetoothGattServer.sendResponse(device, requestId, GATT_SUCCESS, 0, lat.getBytes());
             }else if (Constants.UUID_CHAR_LNG.equals(uuid)){
-                mBluetoothGattServer.sendResponse(device, requestId, GATT_SUCCESS, 0, "TEST_LNG".getBytes());
+                mBluetoothGattServer.sendResponse(device, requestId, GATT_SUCCESS, 0, lng.getBytes());
             }
         }
 
@@ -476,4 +512,140 @@ public class MyBleService extends JobService {
 
 
     };
+
+    public Location getLocation() {
+        try {
+            locationManager = (LocationManager) getApplication().getSystemService(LOCATION_SERVICE);
+
+            // getting GPS status
+            isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+
+            // getting network status
+            isNetworkEnabled = locationManager
+                    .isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+
+            if (!isGPSEnabled && !isNetworkEnabled) {
+                // no network provider is enabled
+            } else {
+                this.canGetLocation = true;
+                // First get location from Network Provider
+                if (isNetworkEnabled) {
+                    //check the network permission
+                    if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                        ActivityCompat.requestPermissions((Activity) getApplicationContext(), new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, 101);
+                    }
+                    locationManager.requestLocationUpdates(
+                            LocationManager.NETWORK_PROVIDER,
+                            MIN_TIME_BW_UPDATES,
+                            MIN_DISTANCE_CHANGE_FOR_UPDATES, this);
+
+                    Log.d("Network", "Network");
+                    if (locationManager != null) {
+                        location = locationManager
+                                .getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+
+                        if (location != null) {
+                            latitude = location.getLatitude();
+                            longitude = location.getLongitude();
+                        }
+                    }
+                }
+
+                // if GPS Enabled get lat/long using GPS Services
+                if (isGPSEnabled) {
+                    if (location == null) {
+                        //check the network permission
+                        if (ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                            ActivityCompat.requestPermissions((Activity) getApplicationContext(), new String[]{android.Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, 101);
+                        }
+                        locationManager.requestLocationUpdates(
+                                LocationManager.GPS_PROVIDER,
+                                MIN_TIME_BW_UPDATES,
+                                MIN_DISTANCE_CHANGE_FOR_UPDATES, this);
+
+                        Log.d("GPS Enabled", "GPS Enabled");
+                        if (locationManager != null) {
+                            location = locationManager
+                                    .getLastKnownLocation(LocationManager.GPS_PROVIDER);
+
+                            if (location != null) {
+                                latitude = location.getLatitude();
+                                longitude = location.getLongitude();
+                            }
+                        }
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return location;
+    }
+
+    @Override
+    public void onLocationChanged(@NonNull Location location) {
+
+    }
+    public void stopUsingGPS(){
+        if(locationManager != null){
+            locationManager.removeUpdates(MyBleService.this);
+        }
+    }
+
+    public double getLatitude(){
+        if(location != null){
+            latitude = location.getLatitude();
+        }
+
+        // return latitude
+        return latitude;
+    }
+
+    /**
+     * Function to get longitude
+     * */
+
+    public double getLongitude(){
+        if(location != null){
+            longitude = location.getLongitude();
+        }
+
+        // return longitude
+        return longitude;
+    }
+
+    public boolean canGetLocation() {
+        return this.canGetLocation;
+    }
+
+    public void showSettingsAlert(){
+        AlertDialog.Builder alertDialog = new AlertDialog.Builder(getApplicationContext());
+
+        // Setting Dialog Title
+        alertDialog.setTitle("GPS is settings");
+
+        // Setting Dialog Message
+        alertDialog.setMessage("GPS is not enabled. Do you want to go to settings menu?");
+
+        // On pressing Settings button
+        alertDialog.setPositiveButton("Settings", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog,int which) {
+                Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                getApplicationContext().startActivity(intent);
+            }
+        });
+
+        // on pressing cancel button
+        alertDialog.setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int which) {
+                dialog.cancel();
+            }
+        });
+        alertDialog.show();
+    }
+
+
+
 }
