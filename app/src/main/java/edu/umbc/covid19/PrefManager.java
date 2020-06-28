@@ -26,6 +26,8 @@ public class PrefManager {
 
     private static final String KEY_IS_ONBOARDING_COMPLETED = "isOnboarded";
     private static final String KEY_IS_TRACING_ON = "isTracingOn";
+    private static final String KEY_DAILY_SECRET = "dailySecretKey";
+    private static final String IS_REPORTED = "isReported";
 
 
     public PrefManager(Context context) {
@@ -90,5 +92,22 @@ public class PrefManager {
         return pref.getBoolean(KEY_IS_TRACING_ON,false);
     }
 
+    public void setDailySecretKey(String key){
+        editor.putString(KEY_DAILY_SECRET,key);
+        editor.commit();
+    }
+
+    public String getDailySecretKey(){
+        return pref.getString(KEY_DAILY_SECRET,"");
+    }
+
+    public void setIsReported(boolean key){
+        editor.putBoolean(IS_REPORTED,key);
+        editor.commit();
+    }
+
+    public boolean getIsReported(){
+        return pref.getBoolean(IS_REPORTED,false);
+    }
 
 }
