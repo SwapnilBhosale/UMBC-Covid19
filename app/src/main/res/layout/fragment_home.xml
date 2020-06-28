@@ -14,15 +14,38 @@
 	android:layout_height="match_parent"
 	android:orientation="vertical">
 
+	<LinearLayout
+		android:padding="20dp"
+		android:id="@+id/emptyView"
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:visibility="gone">
+		<ImageView
+			android:layout_width="wrap_content"
+			android:layout_height="wrap_content"
+			android:src="@drawable/congrats"
+			></ImageView>
+		<TextView
+			android:layout_width="match_parent"
+			android:layout_height="match_parent"
+			android:textColor="@color/blue_main"
+			android:paddingLeft="20dp"
+			android:textSize="20dp"
+			android:text="Congratulation! You are safe and no vulnerable contact tracing detected for you!">
+
+		</TextView>
+	</LinearLayout>
+
 		<LinearLayout
 			android:layout_width="match_parent"
 			android:layout_height="match_parent"
-			android:paddingTop="20dp"
+			android:paddingTop="40dp"
 			android:orientation="vertical">
 			<TextView
 				android:layout_width="wrap_content"
 				android:layout_height="wrap_content"
 				android:paddingBottom="5dp"
+				android:textSize="20dp"
 				android:text="Update infected tracing">
 
 			</TextView>
@@ -33,10 +56,13 @@
 				android:switchMinWidth="56dp"
 				android:text="Switch:"
 				android:checked="true"
+				android:textSize="20dp"
 				android:textOff="OFF"
 				android:textOn="ON"/>
+
 			<ListView
 				android:id="@+id/list1"
+				android:paddingTop="20dp"
 				android:layout_width="match_parent"
 				android:layout_height="0dip"
 				android:layout_weight="1">
@@ -50,6 +76,7 @@
 				android:backgroundTint="@color/maroon"
 				android:text="I am infected" />
 		</LinearLayout>
+
 
 
 

@@ -28,9 +28,10 @@ public class ItemCustomAdapter extends BaseAdapter {
 
     }
 
-    private void setList(List<InfectStatus> list){
+    public void setList(List<InfectStatus> list){
         this.dataSet = list;
     }
+
 
     @Override
     public int getCount() {

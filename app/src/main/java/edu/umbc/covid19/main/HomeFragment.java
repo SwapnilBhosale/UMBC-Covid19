@@ -11,8 +11,11 @@ package edu.umbc.covid19.main;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -29,6 +32,7 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
 import androidx.fragment.app.Fragment;
 
@@ -45,6 +49,7 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
 
 import edu.umbc.covid19.Constants;
 import edu.umbc.covid19.PrefManager;
@@ -53,6 +58,7 @@ import edu.umbc.covid19.database.DBManager;
 
 import static edu.umbc.covid19.Constants.BUTTON_CLICKED_INTENT;
 import static edu.umbc.covid19.Constants.BUTTON_CLICKED_INTENT_STATUS;
+import static edu.umbc.covid19.Constants.INFECTED_ACTION;
 
 public class HomeFragment extends Fragment {
 
@@ -69,6 +75,7 @@ public class HomeFragment extends Fragment {
 	ListView list_view;	public HomeFragment() {
 		super(R.layout.fragment_home);
 	}
+	List<InfectStatus> infectList = new ArrayList<>();
 
 	public static HomeFragment newInstance() {
 		Bundle args = new Bundle();
@@ -80,9 +87,42 @@ public class HomeFragment extends Fragment {
 	@Override
 	public void onCreate(@Nullable Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-
 		prefManager = new PrefManager(getContext());
 
+	}
+
+	BroadcastReceiver listReveiver = new BroadcastReceiver() {
+		@Override
+		public void onReceive(Context context, Intent intent) {
+			if(INFECTED_ACTION.equals(intent.getAction())){
+				infectList.add(intent.getExtras().getParcelable("infectData"));
+				itemCustomAdapter.setList(infectList);
+				itemCustomAdapter.notifyDataSetChanged();
+
+			}
+		}
+	};
+
+	private void sendNotification(InfectStatus status){
+		NotificationCompat.Builder mBuilder =
+				new NotificationCompat.Builder(getActivity());
+
+		//Create the intent that’ll fire when the user taps the notification//
+
+		//Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://www.androidauthority.com/"));
+		//PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, intent, 0);
+
+		//mBuilder.setContentIntent(pendingIntent);
+
+		mBuilder.setSmallIcon(R.drawable.corona_icon);
+		mBuilder.setContentTitle("You have been in proximity of the infected person.");
+		mBuilder.setContentText("One person reported the infection and found at location: "+ "" +". You seems to passed this person. Please take care of yourself and report if any symptoms of the Corona Virus");
+
+		NotificationManager mNotificationManager =
+
+				(NotificationManager) getActivity().getSystemService(Context.NOTIFICATION_SERVICE);
+
+		mNotificationManager.notify(001, mBuilder.build());
 	}
 
 	public void initView(){
@@ -91,6 +131,7 @@ public class HomeFragment extends Fragment {
 			infectedButton.setEnabled(false);
 		}
 		list_view = (ListView) getView().findViewById(R.id.list1);
+		list_view.setEmptyView(getView().findViewById(R.id.emptyView));
 		itemCustomAdapter = new ItemCustomAdapter(new ArrayList<>(), getActivity());
 		list_view.setAdapter(itemCustomAdapter);
 		RequestQueue queue = Volley.newRequestQueue(getActivity());
@@ -133,6 +174,7 @@ public class HomeFragment extends Fragment {
 
 
 		vSwitch = view.findViewById(R.id.switch1);
+		getContext().registerReceiver(listReveiver, new IntentFilter(INFECTED_ACTION));
 		initView();
 		vSwitch.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
 			@Override
@@ -158,6 +200,7 @@ public class HomeFragment extends Fragment {
 	@Override
 	public void onDestroyView() {
 		super.onDestroyView();
+		getContext().unregisterReceiver(listReveiver);
 	}
 
 

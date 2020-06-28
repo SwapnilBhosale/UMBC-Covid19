@@ -52,6 +52,7 @@ public class AlarmReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        Log.i("TAG", "######### onReceive: alarm invoked");
         DBManager manager = new DBManager(context);
         PrefManager prefManager = new PrefManager(context);
         Cursor c = manager.getEphIds();
@@ -67,7 +68,7 @@ public class AlarmReceiver extends BroadcastReceiver {
             String listString = ephIds.stream().map(this::bytesToHex).collect(Collectors.joining(" "));
             manager.insertEKeys(listString);
             prefManager.setDailySecretKey(bytesToHex(day_key));
-
+            Log.i("TAG", "###### onReceive: addeds to DB "+listString+" day_key: "+day_key);
         }
 
 
