@@ -30,7 +30,7 @@ public class DatabaseHelper extends SQLiteOpenHelper {
     private static final String CREATE_TABLE = "create table " + TABLE_NAME + "(" + _ID
             + " INTEGER PRIMARY KEY AUTOINCREMENT, " + EID + " TEXT NOT NULL, " + LAT + " TEXT, "+ LNG+" TEXT, "+RSSI+" TEXT, "+TIMESTAMP+" DATETIME);";
 
-    private static final String CREATE_KEYS_TABLE = "create table" +E_KEYS_TABLE_NAME+ "("+_ID+" INTEGER PRIMARY KEY AUTOINCREMENT, "+EID+" TEXT NOT NULL, " + TIMESTAMP+" DATETIME);";
+    private static final String CREATE_KEYS_TABLE = "create table " +E_KEYS_TABLE_NAME+ "("+_ID+" INTEGER PRIMARY KEY AUTOINCREMENT, "+EID+" TEXT NOT NULL, " + TIMESTAMP+" DATETIME);";
 
 
     public DatabaseHelper(Context context) {

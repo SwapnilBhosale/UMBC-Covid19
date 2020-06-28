@@ -10,12 +10,13 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import edu.umbc.covid19.R;
 
 public class ItemCustomAdapter extends BaseAdapter {
 
-    private ArrayList<InfectStatus> dataSet;
+    private List<InfectStatus> dataSet;
     Context mContext;
     private final LayoutInflater mInflater;
 
@@ -25,6 +26,10 @@ public class ItemCustomAdapter extends BaseAdapter {
         this.mContext=context;
         mInflater = (LayoutInflater)context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
 
+    }
+
+    private void setList(List<InfectStatus> list){
+        this.dataSet = list;
     }
 
     @Override

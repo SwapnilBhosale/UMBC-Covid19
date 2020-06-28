@@ -16,6 +16,7 @@ public class DBManager {
 
     public DBManager(Context c) {
         context = c;
+        open();
     }
 
     public DBManager open() throws SQLException {

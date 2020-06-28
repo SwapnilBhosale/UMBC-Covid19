@@ -240,7 +240,9 @@ public class MyBleService extends JobService  implements LocationListener {
             status.setLat(c.getString(c.getColumnIndex(DatabaseHelper.LAT)));
             status.setLng(c.getString(c.getColumnIndex(DatabaseHelper.LNG)));
             status.setTimestamp(Long.valueOf(c.getString(c.getColumnIndex(DatabaseHelper.TIMESTAMP))));
+            Log.i("TAG", "checkIfInfected: in first");
             statuses.add(status);
+
         }
         try {
             for (int i = 0; i < res.length(); i++) {
@@ -248,8 +250,9 @@ public class MyBleService extends JobService  implements LocationListener {
                 JSONObject obj = res.getJSONObject(i);
                 DataPojo pojo = new DataPojo();
                 pojo.setPublic_key(obj.getString("public_key"));
-                pojo.setTime_stamp(new Date().getTime());
+                pojo.setTime_stamp(obj.getLong("time_stamp"));
                 pojo.setEids(AlarmReceiver.getEphIDsForDay(pojo.getPublic_key().getBytes()));
+                Log.i("TAG", "checkIfInfected: in second");
                 list.add(pojo);
             }
 
