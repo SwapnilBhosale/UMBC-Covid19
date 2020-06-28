@@ -131,6 +131,7 @@ public class HomeFragment extends Fragment {
 			infectedButton.setEnabled(false);
 		}
 		list_view = (ListView) getView().findViewById(R.id.list1);
+		list_view.setEmptyView(getView().findViewById(R.id.emptyView));
 		itemCustomAdapter = new ItemCustomAdapter(new ArrayList<>(), getActivity());
 		list_view.setAdapter(itemCustomAdapter);
 		RequestQueue queue = Volley.newRequestQueue(getActivity());
