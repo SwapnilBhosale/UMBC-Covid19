@@ -35,7 +35,6 @@ public class DBManager {
         contentValue.put(DatabaseHelper.LAT, lat);
         contentValue.put(DatabaseHelper.LNG, lng);
         contentValue.put(DatabaseHelper.RSSI, rssi);
-        contentValue.put(DatabaseHelper.TIMESTAMP, String.valueOf(System.currentTimeMillis()));
         database.insert(DatabaseHelper.TABLE_NAME, null, contentValue);
     }
 
@@ -58,7 +57,6 @@ public class DBManager {
     public void insertEKeys(String keys) {
         ContentValues contentValue = new ContentValues();
         contentValue.put(DatabaseHelper.EID, keys);
-        contentValue.put(DatabaseHelper.TIMESTAMP,String.valueOf(System.currentTimeMillis()) );
         database.insert(DatabaseHelper.E_KEYS_TABLE_NAME, null, contentValue);
     }
 

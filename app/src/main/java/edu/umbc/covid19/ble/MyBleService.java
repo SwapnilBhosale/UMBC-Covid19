@@ -101,6 +101,7 @@ public class MyBleService extends JobService  implements LocationListener {
     private BluetoothGattServer mBluetoothGattServer;
     private BluetoothLeAdvertiser mBluetoothLeAdvertiser;
     private static List<byte[]> ephIds=null;
+    public static boolean isServerStarted = false;
     LocationManager locationManager;
     // flag for GPS status
     boolean isGPSEnabled = false;
@@ -288,52 +289,52 @@ public class MyBleService extends JobService  implements LocationListener {
 
 
     private void startTheAlternateJob(){
-        StartServerMode();
-        final Timer timer = new Timer();
-        RequestQueue queue = Volley.newRequestQueue(this);
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while (true) {
-                    try {
+        try {
+            //while (true) {
+                RequestQueue queue = Volley.newRequestQueue(this);
+                if (!isServerStarted) {
+                    JsonArrayRequest request = new JsonArrayRequest(
+                            Constants.DP3T_SERVER_URL + "allInfectedOneDay", new Response.Listener<JSONArray>() {
+                        @Override
+                        public void onResponse(JSONArray response) {
+                            checkIfInfected(response);
+                        }
+                    }, new Response.ErrorListener() {
+                        @Override
+                        public void onErrorResponse(VolleyError error) {
 
-                        JsonArrayRequest request = new JsonArrayRequest(
-                                Constants.DP3T_SERVER_URL+"allInfectedOneDay", new Response.Listener<JSONArray>() {
-                            @Override
-                            public void onResponse(JSONArray response) {
-                                checkIfInfected(response);
-                            }
-                        }, new Response.ErrorListener() {
-                            @Override
-                            public void onErrorResponse(VolleyError error) {
-
-                            }
-                        });
-                        queue.add(request);
-                        queue.start();
-                        Thread.sleep(30000);
-                    }catch (Exception e){
-                        Log.i("TAG", "run: volley thread inteerupted: "+e.getMessage());
-                    }
+                        }
+                    });
+                    queue.add(request);
+                    queue.start();
+                    isServerStarted = true;
+                    StartServerMode();
                 }
+                final Timer timer = new Timer();
 
-            }
-        }).start();
 
-        timer.schedule(new TimerTask() {
-            @Override
-            public void run() {
-                stopServer();
-                stopAdvertising();
-                StartBluetoothScan();
+
+
                 timer.schedule(new TimerTask() {
                     @Override
                     public void run() {
-                        scanner.stopScan(scanCallback);
+                        stopServer();
+                        isServerStarted = false;
+                        stopAdvertising();
+                        StartBluetoothScan();
+                        timer.schedule(new TimerTask() {
+                            @Override
+                            public void run() {
+                                scanner.stopScan(scanCallback);
+                            }
+                        }, 120000);
                     }
-                },300000);
-            }
-        }, 300000);
+                }, 120000);
+
+          // }
+        }catch(Exception e){
+            Log.i("TAG", "startTheAlternateJob: ");
+        }
 
     }
 
@@ -500,11 +501,13 @@ public class MyBleService extends JobService  implements LocationListener {
             @Override
             public void onScanResult(int callbackType, ScanResult result) {
                 BluetoothDevice device = result.getDevice();
+
                 // ...do whatever you want with this found device
-                if (device != null && null != device.getName())
+                if (device != null)
                     if (!devices.containsKey(device.getName())) {
+                        Log.i("TAG", "******* onScanResult: "+device);
                         devices.put(device.getName(), device);
-                        Toast.makeText(context, "Got device "+device.getName(),Toast.LENGTH_LONG);
+                        //Toast.makeText(context, "Got device "+device.getName(),Toast.LENGTH_LONG);
                         Log.i("TAG", "********* onScanResult: "+device.getName());
                         BluetoothGatt gatt = device.connectGatt(getApplicationContext(), false, new BluetoothGattCallback() {
                             @Override
@@ -701,8 +704,7 @@ public class MyBleService extends JobService  implements LocationListener {
                 Log.i("TAG", "BluetoothDevice DISCONNECTED: " + device);
                 //Remove device from any active subscriptions
                 mRegisteredDevices.remove(device);
-                DBManager manager = new DBManager(getApplicationContext());
-                manager.insert(RECV_EID, RECV_LAT, RECV_LNG, RECV_RSSI);
+
             }
         }
 
@@ -765,7 +767,9 @@ public class MyBleService extends JobService  implements LocationListener {
                 RECV_RSSI = String.valueOf(bytesToLong(value));
                 mBluetoothGattServer.sendResponse(device, requestId, GATT_SUCCESS, 0, null);
                 dbManager.insert(RECV_EID, RECV_LAT, RECV_LNG, RECV_RSSI);
-                mBluetoothGattServer.cancelConnection(device);
+                DBManager manager = new DBManager(getApplicationContext());
+                manager.insert(RECV_EID, RECV_LAT, RECV_LNG, RECV_RSSI);
+                //mBluetoothGattServer.cancelConnection(device);
             }
         }
     };

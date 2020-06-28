@@ -142,6 +142,7 @@ public class HomeFragment extends Fragment {
 				Log.i("TAG", "******** onClick: i am infecyted clicked");
 				try{
 					JSONObject object = new JSONObject();
+					Log.i("TAG", "onClick: &&&& keys is :  "+prefManager.getDailySecretKey());
 					object.put("public_key", prefManager.getDailySecretKey());
 					JsonObjectRequest request = new JsonObjectRequest(Request.Method.POST, Constants.DP3T_SERVER_URL+"addInfected", object, new Response.Listener<JSONObject>() {
 						@Override

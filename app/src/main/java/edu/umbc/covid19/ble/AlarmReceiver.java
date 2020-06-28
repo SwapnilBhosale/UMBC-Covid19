@@ -56,6 +56,7 @@ public class AlarmReceiver extends BroadcastReceiver {
         DBManager manager = new DBManager(context);
         PrefManager prefManager = new PrefManager(context);
         Cursor c = manager.getEphIds();
+
         if(c!=null && c.getCount() == 0){
             ephIds = new ArrayList<>();
             byte[] day_key = generateNewDayKey();
