@@ -261,8 +261,29 @@ public class MyBleService extends JobService  implements LocationListener {
         }catch(Exception e){
             Log.i("TAG", "checkIfInfected: error "+e.getMessage());
         }
+        List<byte[]> infectedEphIds = getInfectedEphIds(list);
+        List<InfectStatus> encounteredInfectedList = findAllInfected(statuses,infectedEphIds);
 
         Log.i("TAG", "checkIfInfected: got from server: "+res.toString());
+    }
+
+    private List<byte[]> getInfectedEphIds(List<DataPojo> list) {
+        List<byte[]> infectedEphIdList = new ArrayList<>();
+        for(int i=0;i<list.size();i++){
+            infectedEphIdList.addAll(list.get(i).getEids());
+        }
+        return infectedEphIdList;
+    }
+
+    private List<InfectStatus> findAllInfected(List<InfectStatus> encounteredStatusList, List<byte[]> infectedEphIds) {
+        List<InfectStatus> encounteredInfectedList = new ArrayList<>();
+        for(InfectStatus status : encounteredStatusList){
+            if(infectedEphIds.contains(status.getEid())){
+                encounteredInfectedList.add(status);
+                Log.i("findAllInfected","match found with key "+status.getEid());
+            }
+        }
+        return encounteredInfectedList;
     }
 
 
