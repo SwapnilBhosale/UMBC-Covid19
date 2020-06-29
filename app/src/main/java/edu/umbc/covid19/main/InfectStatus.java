@@ -6,40 +6,33 @@ import android.os.Parcelable;
 public class InfectStatus implements Parcelable {
 
     private String id;
-    private String eid;
+    private byte[] eid;
     private String lat;
     private String lng;
-    private Long timestamp;
+    private String timestamp;
     private String rssi;
 
     public InfectStatus(){
 
     }
+
+
     protected InfectStatus(Parcel in) {
         id = in.readString();
-        eid = in.readString();
+        eid = in.createByteArray();
         lat = in.readString();
         lng = in.readString();
-        if (in.readByte() == 0) {
-            timestamp = null;
-        } else {
-            timestamp = in.readLong();
-        }
+        timestamp = in.readString();
         rssi = in.readString();
     }
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeString(id);
-        dest.writeString(eid);
+        dest.writeByteArray(eid);
         dest.writeString(lat);
         dest.writeString(lng);
-        if (timestamp == null) {
-            dest.writeByte((byte) 0);
-        } else {
-            dest.writeByte((byte) 1);
-            dest.writeLong(timestamp);
-        }
+        dest.writeString(timestamp);
         dest.writeString(rssi);
     }
 
@@ -68,11 +61,11 @@ public class InfectStatus implements Parcelable {
         this.id = id;
     }
 
-    public String getEid() {
+    public byte[] getEid() {
         return eid;
     }
 
-    public void setEid(String eid) {
+    public void setEid(byte[] eid) {
         this.eid = eid;
     }
 
@@ -92,11 +85,11 @@ public class InfectStatus implements Parcelable {
         this.lng = lng;
     }
 
-    public Long getTimestamp() {
+    public String getTimestamp() {
         return timestamp;
     }
 
-    public void setTimestamp(Long timestamp) {
+    public void setTimestamp(String timestamp) {
         this.timestamp = timestamp;
     }
 
@@ -106,5 +99,17 @@ public class InfectStatus implements Parcelable {
 
     public void setRssi(String rssi) {
         this.rssi = rssi;
+    }
+
+    @Override
+    public String toString() {
+        return "InfectStatus{" +
+                "id='" + id + '\'' +
+                ", eid='" + eid + '\'' +
+                ", lat='" + lat + '\'' +
+                ", lng='" + lng + '\'' +
+                ", timestamp='" + timestamp + '\'' +
+                ", rssi='" + rssi + '\'' +
+                '}';
     }
 }

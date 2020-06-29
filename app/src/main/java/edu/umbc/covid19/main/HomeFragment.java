@@ -9,6 +9,7 @@
  */
 package edu.umbc.covid19.main;
 
+import android.app.AlarmManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -49,11 +50,14 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.List;
+import java.util.TimeZone;
 
 import edu.umbc.covid19.Constants;
 import edu.umbc.covid19.PrefManager;
 import edu.umbc.covid19.R;
+import edu.umbc.covid19.ble.AlarmReceiver;
 import edu.umbc.covid19.database.DBManager;
 
 import static edu.umbc.covid19.Constants.BUTTON_CLICKED_INTENT;
@@ -95,8 +99,7 @@ public class HomeFragment extends Fragment {
 		@Override
 		public void onReceive(Context context, Intent intent) {
 			if(INFECTED_ACTION.equals(intent.getAction())){
-				infectList.add(intent.getExtras().getParcelable("infectData"));
-				itemCustomAdapter.setList(infectList);
+				itemCustomAdapter.setList(intent.getExtras().getParcelableArrayList("infectData"));
 				itemCustomAdapter.notifyDataSetChanged();
 
 			}
@@ -126,6 +129,7 @@ public class HomeFragment extends Fragment {
 	}
 
 	public void initView(){
+		scheduleAlarm();
 		infectedButton = getView().findViewById(R.id.infectedButton);
 		if (prefManager.getIsReported()){
 			infectedButton.setEnabled(false);
@@ -237,6 +241,29 @@ public class HomeFragment extends Fragment {
 		} else {
 			return NotificationManagerCompat.from(context).areNotificationsEnabled();
 		}
+	}
+
+	public void scheduleAlarm() {
+		// time at which alarm will be scheduled here alarm is scheduled at 1 day from current time,
+		// we fetch  the current time in milliseconds and added 1 day time
+		// i.e. 24*60*60*1000= 86,400,000   milliseconds in a day
+		Long time = new GregorianCalendar().getTimeInMillis()+60*1000;
+		Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("EST"));
+		calendar.set(Calendar.HOUR_OF_DAY, 23);
+		calendar.set(Calendar.SECOND,0);
+		calendar.set(Calendar.MINUTE,58);
+		// create an Intent and set the class which will execute when Alarm triggers, here we have
+		// given AlarmReciever in the Intent, the onRecieve() method of this class will execute when
+		// alarm triggers and
+		//we call the method inside onRecieve() method pf Alarmreciever class
+		Intent intentAlarm = new Intent(getActivity(), AlarmReceiver.class);
+		// create the object
+		AlarmManager alarmManager = (AlarmManager) getActivity().getSystemService(Context.ALARM_SERVICE);
+		//set the alarm for particular time
+		alarmManager.setRepeating(AlarmManager.RTC_WAKEUP,System.currentTimeMillis()+500, AlarmManager.INTERVAL_DAY,  PendingIntent.getBroadcast(getActivity(),1,  intentAlarm, PendingIntent.FLAG_UPDATE_CURRENT));
+		//Toast.makeText(this, "Alarm Scheduled ", Toast.LENGTH_LONG).show();
+		Log.i("TAG", "###### scheduleAlarm: scheduled");
+
 	}
 
 }

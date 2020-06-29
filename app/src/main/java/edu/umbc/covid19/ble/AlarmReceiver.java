@@ -50,6 +50,9 @@ public class AlarmReceiver extends BroadcastReceiver {
         return new String(hexChars);
     }
 
+    private String getStringFromBytes(byte[] data){
+      return new String(data);
+    }
     @Override
     public void onReceive(Context context, Intent intent) {
         Log.i("TAG", "######### onReceive: alarm invoked");
@@ -58,18 +61,19 @@ public class AlarmReceiver extends BroadcastReceiver {
         Cursor c = manager.getEphIds();
 
         if(c!=null && c.getCount() == 0){
+
             ephIds = new ArrayList<>();
             byte[] day_key = generateNewDayKey();
             Log.i("Alarm recieved", "KEY created for day : "+day_key.toString());
-            getEphIDsForDay(day_key);
+            ephIds = getEphIDsForDay(day_key);
             Log.i("EPHID count: ", String.valueOf(ephIds.size()));
             Log.i("First EPHID: ",ephIds.get(0).toString());
             MyBleService.setEphIds(ephIds);
 
-            String listString = ephIds.stream().map(this::bytesToHex).collect(Collectors.joining(" "));
-            manager.insertEKeys(listString);
-            prefManager.setDailySecretKey(bytesToHex(day_key));
-            Log.i("TAG", "###### onReceive: addeds to DB "+listString+" day_key: "+day_key);
+            String listString = ephIds.stream().map(this::getStringFromBytes).collect(Collectors.joining(","));
+            manager.insertEKeys(ephIds);
+            prefManager.setDailySecretKey(Arrays.toString(day_key));
+            Log.i("TAG", "###### onReceive: addeds to DayKey" +Arrays.toString(day_key));
         }
 
 
@@ -82,7 +86,7 @@ public class AlarmReceiver extends BroadcastReceiver {
     }
     //entry function
     public static List<byte[]> getEphIDsForDay(byte[] current_day_key) {
-
+        ephIds = new ArrayList<>();
         byte[] stream_key = calculateHMAC(current_day_key);
 
         byte[] cipher_stream = generateCipherStream(stream_key);

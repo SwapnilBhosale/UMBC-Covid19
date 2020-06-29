@@ -5,6 +5,9 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
+import android.util.Log;
+
+import java.util.List;
 
 public class DBManager {
 
@@ -29,7 +32,7 @@ public class DBManager {
         dbHelper.close();
     }
 
-    public void insert(String eid, String lat, String lng, String rssi) {
+    public void insert(byte[] eid, String lat, String lng, String rssi) {
         ContentValues contentValue = new ContentValues();
         contentValue.put(DatabaseHelper.EID, eid);
         contentValue.put(DatabaseHelper.LAT, lat);
@@ -43,6 +46,8 @@ public class DBManager {
         if (cursor != null) {
             cursor.moveToFirst();
         }
+
+        Log.i("DBManager", "fetchKeys: "+cursor.getCount());
         return cursor;
     }
 
@@ -54,10 +59,13 @@ public class DBManager {
         return cursor;
     }
 
-    public void insertEKeys(String keys) {
+    public void insertEKeys(List<byte[]> keys) {
         ContentValues contentValue = new ContentValues();
-        contentValue.put(DatabaseHelper.EID, keys);
-        database.insert(DatabaseHelper.E_KEYS_TABLE_NAME, null, contentValue);
+        for(byte[] val: keys){
+            contentValue.put(DatabaseHelper.EID, val);
+            database.insert(DatabaseHelper.E_KEYS_TABLE_NAME, null, contentValue);
+        }
+
     }
 
 

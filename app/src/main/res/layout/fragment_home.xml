@@ -65,16 +65,18 @@
 				android:paddingTop="20dp"
 				android:layout_width="match_parent"
 				android:layout_height="0dip"
-				android:layout_weight="1">
+				android:layout_weight="5">
 			</ListView>
 
 			<Button
 				android:id="@+id/infectedButton"
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
-				android:layout_centerInParent="true"
+				android:textAlignment="center"
+				android:textSize="20dp"
 				android:backgroundTint="@color/maroon"
-				android:text="I am infected" />
+				android:text="I am infected"
+				android:gravity="bottom|center"/>
 		</LinearLayout>
 
 

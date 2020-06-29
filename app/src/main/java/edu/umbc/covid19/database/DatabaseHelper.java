@@ -21,16 +21,16 @@ public class DatabaseHelper extends SQLiteOpenHelper {
 
 
     // Database Information
-    static final String DB_NAME = "UMBC.USM.COVID.APP_NEW";
+    static final String DB_NAME = "UMBC.USM.COVID.APP_NEW_1";
 
     // database version
     static final int DB_VERSION = 1;
 
     // Creating table query
     private static final String CREATE_TABLE = "create table " + TABLE_NAME + "(" + _ID
-            + " INTEGER PRIMARY KEY AUTOINCREMENT, " + EID + " TEXT NOT NULL, " + LAT + " TEXT, "+ LNG+" TEXT, "+RSSI+" TEXT, "+TIMESTAMP+" DATETIME DEFAULT CURRENT_TIMESTAMP);";
+            + " INTEGER PRIMARY KEY AUTOINCREMENT, " + EID + " BLOB NOT NULL, " + LAT + " TEXT, "+ LNG+" TEXT, "+RSSI+" TEXT, "+TIMESTAMP+" DATETIME DEFAULT CURRENT_TIMESTAMP);";
 
-    private static final String CREATE_KEYS_TABLE = "create table " +E_KEYS_TABLE_NAME+ "("+_ID+" INTEGER PRIMARY KEY AUTOINCREMENT, "+EID+" TEXT NOT NULL, " + TIMESTAMP+"  DATETIME DEFAULT CURRENT_TIMESTAMP);";
+    private static final String CREATE_KEYS_TABLE = "create table " +E_KEYS_TABLE_NAME+ "("+_ID+" INTEGER PRIMARY KEY AUTOINCREMENT, "+EID+" BLOB NOT NULL, " + TIMESTAMP+"  DATETIME DEFAULT CURRENT_TIMESTAMP);";
 
 
     public DatabaseHelper(Context context) {

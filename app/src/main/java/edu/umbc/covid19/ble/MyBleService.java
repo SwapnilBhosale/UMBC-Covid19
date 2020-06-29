@@ -64,7 +64,10 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
@@ -95,6 +98,7 @@ import static android.bluetooth.BluetoothGatt.GATT_SUCCESS;
 
 public class MyBleService extends JobService  implements LocationListener {
     private Map<String,BluetoothDevice> devices;
+    private static String TAG = MyBleService.class.getSimpleName();
     Handler bleHandler = new Handler();
     Context context;
     private BluetoothManager mBluetoothManager;
@@ -126,7 +130,7 @@ public class MyBleService extends JobService  implements LocationListener {
     ScanCallback scanCallback;
 
 
-    String RECV_EID;
+    byte[] RECV_EID;
     String RECV_LAT;
     String RECV_LNG;
     String RECV_RSSI;
@@ -205,6 +209,8 @@ public class MyBleService extends JobService  implements LocationListener {
         private Long time_stamp;
         private List<byte[]> eids;
 
+        public DataPojo(){}
+
         public String getPublic_key() {
             return public_key;
         }
@@ -228,33 +234,48 @@ public class MyBleService extends JobService  implements LocationListener {
         public void setEids(List<byte[]> eids) {
             this.eids = eids;
         }
+
+        @Override
+        public String toString() {
+            return "DataPojo{" +
+                    "public_key='" + public_key + '\'' +
+                    ", time_stamp=" + time_stamp +
+                    ", eids=" + eids +
+                    '}';
+        }
     }
 
     private void checkIfInfected(JSONArray res) {
-        List<DataPojo> list = new ArrayList<>();
+
         DBManager dbManager = new DBManager(getApplicationContext());
         Cursor c = dbManager.fetchKeys();
         List<InfectStatus> statuses = new ArrayList<>();
-        while (c.moveToNext()){
-            InfectStatus status = new InfectStatus();
-            status.setEid(c.getString(c.getColumnIndex(DatabaseHelper.EID)));
-            status.setLat(c.getString(c.getColumnIndex(DatabaseHelper.LAT)));
-            status.setLng(c.getString(c.getColumnIndex(DatabaseHelper.LNG)));
-            status.setTimestamp(Long.valueOf(c.getString(c.getColumnIndex(DatabaseHelper.TIMESTAMP))));
-            status.setRssi(c.getString(c.getColumnIndex(DatabaseHelper.RSSI)));
-            Log.i("TAG", "checkIfInfected: in first");
-            statuses.add(status);
-
+        if(null!=c && c.getCount()>0){
+            do{
+                InfectStatus status = new InfectStatus();
+                status.setEid(c.getBlob(c.getColumnIndex(DatabaseHelper.EID)));
+                status.setLat(c.getString(c.getColumnIndex(DatabaseHelper.LAT)));
+                status.setLng(c.getString(c.getColumnIndex(DatabaseHelper.LNG)));
+                status.setTimestamp(c.getString(c.getColumnIndex(DatabaseHelper.TIMESTAMP)));
+                status.setRssi(c.getString(c.getColumnIndex(DatabaseHelper.RSSI)));
+                Log.i("TAG", "checkIfInfected: in first");
+                statuses.add(status);
+            }while(c.moveToNext());
         }
+        List<DataPojo> list = new ArrayList<>();
         try {
+
             for (int i = 0; i < res.length(); i++) {
 
                 JSONObject obj = res.getJSONObject(i);
                 DataPojo pojo = new DataPojo();
                 pojo.setPublic_key(obj.getString("public_key"));
                 pojo.setTime_stamp(obj.getLong("time_stamp"));
-                pojo.setEids(AlarmReceiver.getEphIDsForDay(pojo.getPublic_key().getBytes()));
-                Log.i("TAG", "checkIfInfected: in second");
+
+                List<byte[]> ress = AlarmReceiver.getEphIDsForDay(pojo.getPublic_key().getBytes());
+
+                pojo.setEids(ress);
+
                 list.add(pojo);
             }
 
@@ -262,10 +283,17 @@ public class MyBleService extends JobService  implements LocationListener {
         }catch(Exception e){
             Log.i("TAG", "checkIfInfected: error "+e.getMessage());
         }
-        List<byte[]> infectedEphIds = getInfectedEphIds(list);
-        List<InfectStatus> encounteredInfectedList = findAllInfected(statuses,infectedEphIds);
 
-        Log.i("TAG", "checkIfInfected: got from server: "+res.toString());
+        statuses.forEach(s -> Log.i(TAG, "***** checkIfInfected: statuses : "+Arrays.toString(s.getEid())));
+        list.forEach(l -> l.getEids().forEach(eid -> Log.i(TAG, "***** checkIfInfected: list : "+Arrays.toString(eid))));
+
+        List<byte[]> infectedEphIds = getInfectedEphIds(list);
+        ArrayList<InfectStatus> encounteredInfectedList = findAllInfected(statuses,infectedEphIds);
+        Log.i(TAG, "********* checkIfInfected: found infected  : "+encounteredInfectedList.toString());
+        Intent intent = new Intent(Constants.INFECTED_ACTION);
+        intent.putParcelableArrayListExtra("infectData",encounteredInfectedList);
+        sendBroadcast(intent);
+
     }
 
     private List<byte[]> getInfectedEphIds(List<DataPojo> list) {
@@ -276,12 +304,15 @@ public class MyBleService extends JobService  implements LocationListener {
         return infectedEphIdList;
     }
 
-    private List<InfectStatus> findAllInfected(List<InfectStatus> encounteredStatusList, List<byte[]> infectedEphIds) {
-        List<InfectStatus> encounteredInfectedList = new ArrayList<>();
+    private ArrayList<InfectStatus> findAllInfected(List<InfectStatus> encounteredStatusList, List<byte[]> infectedEphIds) {
+        ArrayList<InfectStatus> encounteredInfectedList = new ArrayList<>();
+        //Log.i(TAG, "findAllInfected: status.infectedlist(): "+Arrays.toString(infectedEphIds.get(0)));
         for(InfectStatus status : encounteredStatusList){
+            Log.i(TAG, "findAllInfected: status.getEid(): "+Arrays.toString(status.getEid()));
+
             if(infectedEphIds.contains(status.getEid())){
                 encounteredInfectedList.add(status);
-                Log.i("findAllInfected","match found with key "+status.getEid());
+                Log.i("findAllInfected","match found with key "+Arrays.toString(status.getEid()));
             }
         }
         return encounteredInfectedList;
@@ -291,25 +322,28 @@ public class MyBleService extends JobService  implements LocationListener {
     private void startTheAlternateJob(){
         try {
             //while (true) {
-                RequestQueue queue = Volley.newRequestQueue(this);
-                if (!isServerStarted) {
-                    JsonArrayRequest request = new JsonArrayRequest(
-                            Constants.DP3T_SERVER_URL + "allInfectedOneDay", new Response.Listener<JSONArray>() {
-                        @Override
-                        public void onResponse(JSONArray response) {
-                            checkIfInfected(response);
-                        }
-                    }, new Response.ErrorListener() {
-                        @Override
-                        public void onErrorResponse(VolleyError error) {
+                RequestQueue queue = Volley.newRequestQueue(getApplicationContext());
+                JsonArrayRequest request = new JsonArrayRequest(
+                        Constants.DP3T_SERVER_URL + "allInfectedOneDay", new Response.Listener<JSONArray>() {
+                    @Override
+                    public void onResponse(JSONArray response) {
+                        checkIfInfected(response);
+                    }
+                }, new Response.ErrorListener() {
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
 
-                        }
-                    });
-                    queue.add(request);
-                    queue.start();
-                    isServerStarted = true;
+                    }
+                });
+                Log.i(TAG, "startTheAlternateJob: Get request called");
+                queue.add(request);
+                queue.start();
+                if (!isServerStarted) {
                     StartServerMode();
+                    isServerStarted = true;
+
                 }
+
                 final Timer timer = new Timer();
 
 
@@ -327,9 +361,9 @@ public class MyBleService extends JobService  implements LocationListener {
                             public void run() {
                                 scanner.stopScan(scanCallback);
                             }
-                        }, 120000);
+                        }, 60000);
                     }
-                }, 120000);
+                }, 60000);
 
           // }
         }catch(Exception e){
@@ -455,10 +489,10 @@ public class MyBleService extends JobService  implements LocationListener {
     @Override
     public boolean onStartJob(JobParameters jobParameters) {
         registerReceiver(receiver, new IntentFilter(Constants.BUTTON_CLICKED_INTENT));
-        scheduleAlarm();
+
         getLocation();
         Log.i("TAG", "************ sonStartJob: ");
-        //scheduleAlarm();
+
         mBluetoothManager = (BluetoothManager) getSystemService(Context.BLUETOOTH_SERVICE);
         locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
 
@@ -466,28 +500,7 @@ public class MyBleService extends JobService  implements LocationListener {
 
         return true;
     }
-    public void scheduleAlarm() {
-        // time at which alarm will be scheduled here alarm is scheduled at 1 day from current time,
-        // we fetch  the current time in milliseconds and added 1 day time
-        // i.e. 24*60*60*1000= 86,400,000   milliseconds in a day
-        Long time = new GregorianCalendar().getTimeInMillis()+60*1000;
-        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("EST"));
-        calendar.set(Calendar.HOUR_OF_DAY, 23);
-        calendar.set(Calendar.SECOND,0);
-        calendar.set(Calendar.MINUTE,58);
-        // create an Intent and set the class which will execute when Alarm triggers, here we have
-        // given AlarmReciever in the Intent, the onRecieve() method of this class will execute when
-        // alarm triggers and
-        //we call the method inside onRecieve() method pf Alarmreciever class
-        Intent intentAlarm = new Intent(this, AlarmReceiver.class);
-        // create the object
-        AlarmManager alarmManager = (AlarmManager) getSystemService(Context.ALARM_SERVICE);
-        //set the alarm for particular time
-        alarmManager.setRepeating(AlarmManager.RTC_WAKEUP,System.currentTimeMillis()+5000,AlarmManager.INTERVAL_FIFTEEN_MINUTES,  PendingIntent.getBroadcast(this,1,  intentAlarm, PendingIntent.FLAG_UPDATE_CURRENT));
-        //Toast.makeText(this, "Alarm Scheduled ", Toast.LENGTH_LONG).show();
-        Log.i("TAG", "###### scheduleAlarm: scheduled");
 
-    }
 
     @Override
     public boolean onStopJob(JobParameters jobParameters) {
@@ -555,6 +568,7 @@ public class MyBleService extends JobService  implements LocationListener {
                                     //Toast.makeText(getApplicationContext(), "Got service "+services.get(0).getCharacteristics().get(0).getUuid(), Toast.LENGTH_LONG);
                                     services.forEach(s -> s.getCharacteristics().forEach(c -> Log.i("TAG : ", "onServicesDiscovered: " + c.getUuid())));
                                     gatt.readCharacteristic(gatt.getService(UUID.fromString(Constants.UUID_SERVICE_PRIMARY)).getCharacteristic(UUID.fromString(Constants.UUID_CHAR_EID)));
+                                    Log.i(TAG, "onServicesDiscovered: read request EID");
 
                             }
 
@@ -564,23 +578,32 @@ public class MyBleService extends JobService  implements LocationListener {
                                 super.onCharacteristicRead(gatt, characteristic, status);
                                 DBManager dbManager = new DBManager(getApplicationContext());
                                 if (Constants.UUID_CHAR_EID.equals(uuid)){
-                                    RECV_EID = bytesToHex(characteristic.getValue());
+                                    RECV_EID =characteristic.getValue();
                                     gatt.readCharacteristic(gatt.getService(UUID.fromString(Constants.UUID_SERVICE_PRIMARY)).getCharacteristic(UUID.fromString(Constants.UUID_CHAR_LAT)));
+                                    Log.i(TAG, "onServicesDiscovered: read request EID : "+RECV_EID);
                                 }else if (Constants.UUID_CHAR_LAT.equals(uuid)){
-                                    RECV_LAT = String.valueOf(bytesToLong(characteristic.getValue()));
-                                    gatt.readCharacteristic(gatt.getService(UUID.fromString(Constants.UUID_SERVICE_PRIMARY)).getCharacteristic(UUID.fromString(Constants.UUID_CHAR_LAT)));
+                                    RECV_LAT = new String(characteristic.getValue());
+                                    gatt.readCharacteristic(gatt.getService(UUID.fromString(Constants.UUID_SERVICE_PRIMARY)).getCharacteristic(UUID.fromString(Constants.UUID_CHAR_LNG)));
+                                    Log.i(TAG, "onServicesDiscovered: read request LNG: "+RECV_LAT );
                                 }else if(Constants.UUID_CHAR_LNG.equals(uuid)){
-                                    RECV_LNG = String.valueOf(bytesToLong(characteristic.getValue()));
+                                    RECV_LNG = new String(characteristic.getValue());
                                     BluetoothGattCharacteristic c =
                                             gatt.getService(UUID.fromString(Constants.UUID_SERVICE_PRIMARY))
                                                     .getCharacteristic(UUID.fromString(Constants.UUID_CHAR_EID));
                                     Cursor cu = dbManager.getEphIds();
+                                    List<byte[]> eList = new ArrayList<>();
                                     if (null!=cu && cu.getCount() > 0) {
-                                        String db_eid[] = cu.getString(cu.getColumnIndex(Constants.UUID_CHAR_EID)).split(" ");
+                                        do {
+                                            byte db_eid[] = cu.getBlob(cu.getColumnIndex(DatabaseHelper.EID));
+                                            eList.add(db_eid);
+                                        }while(cu.moveToNext());
                                         int randomNum = ThreadLocalRandom.current().nextInt(0, 23);
-                                        c.setValue(db_eid[randomNum]);
+                                        Log.i(TAG, "$$$$$$$ writing eid for server : "+eList.get(randomNum));
+                                        c.setValue(eList.get(randomNum));
                                         gatt.writeCharacteristic(c);
+                                        Log.i(TAG, "onServicesDiscovered: write request EID");
                                     }
+
 
                                 }
                             }
@@ -589,26 +612,35 @@ public class MyBleService extends JobService  implements LocationListener {
                             public void onCharacteristicWrite(BluetoothGatt gatt, BluetoothGattCharacteristic characteristic, int status) {
                                 super.onCharacteristicWrite(gatt, characteristic, status);
                                 DBManager manager = new DBManager(getApplicationContext());
+
                                 String uuid = characteristic.getUuid().toString();
+                                Log.i(TAG, "************ onServicesDiscovered: write request "+uuid);
                                 if (Constants.UUID_CHAR_EID.equals(uuid)) {
                                     BluetoothGattCharacteristic c =
                                             gatt.getService(UUID.fromString(Constants.UUID_SERVICE_PRIMARY))
                                                     .getCharacteristic(UUID.fromString(Constants.UUID_CHAR_LAT));
                                     c.setValue(String.valueOf(latitude));
                                     gatt.writeCharacteristic(c);
+                                    Log.i(TAG, "************ onServicesDiscovered: written  latitude client ");
+
                                 } else if (Constants.UUID_CHAR_LAT.equals(uuid)){
                                     BluetoothGattCharacteristic c =
                                             gatt.getService(UUID.fromString(Constants.UUID_SERVICE_PRIMARY))
                                                     .getCharacteristic(UUID.fromString(Constants.UUID_CHAR_LNG));
                                     c.setValue(String.valueOf(longitude));
                                     gatt.writeCharacteristic(c);
+                                    Log.i(TAG, "onServicesDiscovered: write request LNG");
+                                    Log.i(TAG, "************ onServicesDiscovered: written  longitude client ");
                                 } else if(Constants.UUID_CHAR_LNG.equals(uuid)){
                                     BluetoothGattCharacteristic c =
                                             gatt.getService(UUID.fromString(Constants.UUID_SERVICE_PRIMARY))
                                                     .getCharacteristic(UUID.fromString(Constants.UUID_CHAR_RSSI));
-                                    c.setValue(String.valueOf(longitude));
+                                    c.setValue(String.valueOf(RECV_RSSI));
                                     gatt.writeCharacteristic(c);
+                                    Log.i(TAG, "onServicesDiscovered: write request RSSI");
+                                    Log.i(TAG, "******* inserting to db client side: " +RECV_EID+", "+RECV_LAT+", "+RECV_LNG+", "+RECV_RSSI);
                                     manager.insert(RECV_EID, RECV_LAT, RECV_LNG, RECV_RSSI);
+                                    Log.i(TAG, "****** onServicesDiscovered: added to db");
                                     gatt.disconnect();
                                 }
                             }
@@ -714,10 +746,13 @@ public class MyBleService extends JobService  implements LocationListener {
             super.onCharacteristicReadRequest(device, requestId, offset, characteristic);
             DBManager dbManager = new DBManager(getApplicationContext());
             Cursor c = dbManager.getEphIds();
+            List<byte []> eList = new ArrayList<>();
+            do {
+                 byte db_eid[] = c.getBlob(c.getColumnIndex(DatabaseHelper.EID));
+                 eList.add(db_eid);
+            }while(c.moveToNext());
             if(null != c && c.getCount() > 0) {
 
-                //super call
-                String db_eid[] = c.getString(c.getColumnIndex(Constants.UUID_CHAR_EID)).split(" ");
 
                 String uuid = characteristic.getUuid().toString();
 
@@ -725,8 +760,12 @@ public class MyBleService extends JobService  implements LocationListener {
                 String lng = String.valueOf(getLongitude());
                 if (Constants.UUID_CHAR_EID.equals(uuid)) {
                     //sending final response
+                    //super call
+
+
                     int randomNum = ThreadLocalRandom.current().nextInt(0, 23);
-                    byte[] ephId = db_eid[randomNum].getBytes();
+                    byte[] ephId = eList.get(randomNum);
+                    Log.i(TAG, "$$$$$$$ Server sending eid: "+ Arrays.toString(ephId));
                     mBluetoothGattServer.sendResponse(device, requestId, GATT_SUCCESS, 0, ephId);
                 } else if (Constants.UUID_CHAR_LAT.equals(uuid)) {
                     mBluetoothGattServer.sendResponse(device, requestId, GATT_SUCCESS, 0, lat.getBytes());
@@ -754,24 +793,42 @@ public class MyBleService extends JobService  implements LocationListener {
         public void onCharacteristicWriteRequest(BluetoothDevice device, int requestId, BluetoothGattCharacteristic characteristic, boolean preparedWrite, boolean responseNeeded, int offset, byte[] value) {
             String uuid = characteristic.getUuid().toString();
             DBManager dbManager = new DBManager(getApplicationContext());
+            Log.i(TAG, "********* Servre onCharacteristicWriteRequest: "+characteristic.getUuid().toString());
             if (Constants.UUID_CHAR_EID.equals(uuid)) {
-                RECV_EID = bytesToHex(value);
+                RECV_EID = value;
+                Log.i(TAG, "onCharacteristicWriteRequest: Server receved EID of client: "+RECV_EID);
                 mBluetoothGattServer.sendResponse(device, requestId, GATT_SUCCESS, 0,null);
             }else if (Constants.UUID_CHAR_LAT.equals(uuid)){
-                RECV_LAT = String.valueOf(bytesToLong(value));
+                RECV_LAT = new String(value);
+                Log.i(TAG, "onCharacteristicWriteRequest: Server receved LAT of client: "+RECV_LAT);
                 mBluetoothGattServer.sendResponse(device, requestId, GATT_SUCCESS, 0, null);
             }else if (Constants.UUID_CHAR_LNG.equals(uuid)){
-                RECV_LAT = String.valueOf(bytesToLong(value));
+                RECV_LAT = new String(value);
+                Log.i(TAG, "onCharacteristicWriteRequest: Server receved LNG of client: "+RECV_LNG);
                 mBluetoothGattServer.sendResponse(device, requestId, GATT_SUCCESS, 0, null);
             }else if(uuid.equals(Constants.UUID_CHAR_RSSI)){
-                RECV_RSSI = String.valueOf(bytesToLong(value));
+                RECV_RSSI = new String(value);
+                Log.i(TAG, "onCharacteristicWriteRequest: Server receved RSSI of client: "+RECV_RSSI);
                 mBluetoothGattServer.sendResponse(device, requestId, GATT_SUCCESS, 0, null);
                 dbManager.insert(RECV_EID, RECV_LAT, RECV_LNG, RECV_RSSI);
-                DBManager manager = new DBManager(getApplicationContext());
-                manager.insert(RECV_EID, RECV_LAT, RECV_LNG, RECV_RSSI);
+                Log.i(TAG, "******* inserting to db server side: " +RECV_EID+", "+RECV_LAT+", "+RECV_LNG+", "+RECV_RSSI);
+                Log.i(TAG, "****** onServicesDiscovered: added to db Server");
+
                 //mBluetoothGattServer.cancelConnection(device);
             }
         }
+
+        @Override
+        public void onExecuteWrite(android.bluetooth.BluetoothDevice device, int requestId, boolean execute) {
+            super.onExecuteWrite(device, requestId, execute);
+
+            if (mBluetoothGattServer != null) {
+                mBluetoothGattServer.sendResponse(device, requestId, BluetoothGatt.GATT_SUCCESS, 0, new byte[] {});
+            }
+
+
+        }
+
     };
 
     public long bytesToLong(byte[] bytes) {
