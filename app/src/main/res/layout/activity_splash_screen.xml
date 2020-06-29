@@ -13,8 +13,8 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:fitsSystemWindows="true"
-        android:scaleType="centerCrop"
         android:background="@drawable/ic_launcher_foreground"
-        app:srcCompat="@drawable/logo"/>
+        app:srcCompat="@drawable/umbc_logo"/>
+
 
 </androidx.coordinatorlayout.widget.CoordinatorLayout>

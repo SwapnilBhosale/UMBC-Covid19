@@ -72,7 +72,7 @@ public class AlarmReceiver extends BroadcastReceiver {
 
             String listString = ephIds.stream().map(this::getStringFromBytes).collect(Collectors.joining(","));
             manager.insertEKeys(ephIds);
-            prefManager.setDailySecretKey(Arrays.toString(day_key));
+            prefManager.setDailySecretKey(new String(day_key));
             Log.i("TAG", "###### onReceive: addeds to DayKey" +Arrays.toString(day_key));
         }
 

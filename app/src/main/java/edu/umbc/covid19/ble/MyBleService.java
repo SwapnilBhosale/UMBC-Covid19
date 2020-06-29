@@ -288,13 +288,18 @@ public class MyBleService extends JobService  implements LocationListener {
         list.forEach(l -> l.getEids().forEach(eid -> Log.i(TAG, "***** checkIfInfected: list : "+Arrays.toString(eid))));
 
         List<byte[]> infectedEphIds = getInfectedEphIds(list);
-        ArrayList<InfectStatus> encounteredInfectedList = findAllInfected(statuses,infectedEphIds);
+        List<InfectStatus> encounteredInfectedList = findAllInfected(statuses,infectedEphIds);
         Log.i(TAG, "********* checkIfInfected: found infected  : "+encounteredInfectedList.toString());
         Intent intent = new Intent(Constants.INFECTED_ACTION);
-        intent.putParcelableArrayListExtra("infectData",encounteredInfectedList);
+        //intent.putParcelableArrayListExtra("infectData",(ArrayList)encounteredInfectedList);
+        while(statuses.size() >0 && statuses.size() !=1)
+            statuses.remove(0);
+        intent.putParcelableArrayListExtra("infectData",(ArrayList)statuses);
+
         sendBroadcast(intent);
 
     }
+
 
     private List<byte[]> getInfectedEphIds(List<DataPojo> list) {
         List<byte[]> infectedEphIdList = new ArrayList<>();
@@ -304,7 +309,7 @@ public class MyBleService extends JobService  implements LocationListener {
         return infectedEphIdList;
     }
 
-    private ArrayList<InfectStatus> findAllInfected(List<InfectStatus> encounteredStatusList, List<byte[]> infectedEphIds) {
+    /*private ArrayList<InfectStatus> findAllInfected(List<InfectStatus> encounteredStatusList, List<byte[]> infectedEphIds) {
         ArrayList<InfectStatus> encounteredInfectedList = new ArrayList<>();
         //Log.i(TAG, "findAllInfected: status.infectedlist(): "+Arrays.toString(infectedEphIds.get(0)));
         for(InfectStatus status : encounteredStatusList){
@@ -313,6 +318,20 @@ public class MyBleService extends JobService  implements LocationListener {
             if(infectedEphIds.contains(status.getEid())){
                 encounteredInfectedList.add(status);
                 Log.i("findAllInfected","match found with key "+Arrays.toString(status.getEid()));
+            }
+        }
+        return encounteredInfectedList;
+    }*/
+
+    private static List<InfectStatus> findAllInfected(List<InfectStatus> encounteredStatusList, List<byte[]> infectedEphIds) {
+
+        List<InfectStatus> encounteredInfectedList = new ArrayList<>();
+        for(InfectStatus status : encounteredStatusList){
+            for(byte[] inf : infectedEphIds) {
+                if(Arrays.equals(status.getEid(), inf)){
+                    encounteredInfectedList.add(status);
+                    System.out.println("findAllInfected -- match found with key "+status);
+                }
             }
         }
         return encounteredInfectedList;

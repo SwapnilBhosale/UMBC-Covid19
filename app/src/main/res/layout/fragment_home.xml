@@ -12,7 +12,8 @@
 	xmlns:tools="http://schemas.android.com/tools"
 	android:layout_width="match_parent"
 	android:layout_height="match_parent"
-	android:orientation="vertical">
+	android:orientation="vertical"
+	android:background="@color/grey_dark">
 
 	<LinearLayout
 		android:padding="20dp"
@@ -55,6 +56,7 @@
 				android:layout_height="wrap_content"
 				android:switchMinWidth="56dp"
 				android:text="Switch:"
+				android:textColor="#000000"
 				android:checked="true"
 				android:textSize="20dp"
 				android:textOff="OFF"
@@ -67,6 +69,22 @@
 				android:layout_height="0dip"
 				android:layout_weight="5">
 			</ListView>
+			<TextView
+				android:paddingTop="30dp"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:textSize="20dp"
+				android:textColor="#000000"
+				android:text="Shops people count:">
+
+			</TextView>
+			<ListView
+				android:id="@+id/list2"
+				android:paddingTop="20dp"
+				android:layout_width="match_parent"
+				android:layout_height="0dip"
+				android:layout_weight="4">
+			</ListView>
 
 			<Button
 				android:id="@+id/infectedButton"
@@ -74,7 +92,7 @@
 				android:layout_height="wrap_content"
 				android:textAlignment="center"
 				android:textSize="20dp"
-				android:backgroundTint="@color/maroon"
+				android:backgroundTint="@color/blue_main"
 				android:text="I am infected"
 				android:gravity="bottom|center"/>
 		</LinearLayout>

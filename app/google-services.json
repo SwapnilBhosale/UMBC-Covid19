@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "339063129253",
+    "firebase_url": "https://storeselect-558c4.firebaseio.com",
+    "project_id": "storeselect-558c4",
+    "storage_bucket": "storeselect-558c4.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:339063129253:android:2cc6270d45beb7529fb94c",
+        "android_client_info": {
+          "package_name": "edu.umbc.covid19"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "339063129253-g4ia389qiohhoun1p6231tuudgidbgq5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDkYvQQQrXVD8N2Wp2QAdxnPQsbDCuAiCs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "339063129253-g4ia389qiohhoun1p6231tuudgidbgq5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

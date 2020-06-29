@@ -10,6 +10,7 @@
 package edu.umbc.covid19.main;
 
 import android.app.AlarmManager;
+import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -44,6 +45,12 @@ import com.android.volley.Response;
 import com.android.volley.VolleyError;
 import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import org.json.JSONObject;
 
@@ -51,15 +58,18 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.GregorianCalendar;
+import java.util.HashMap;
 import java.util.List;
 import java.util.TimeZone;
 
 import edu.umbc.covid19.Constants;
+import edu.umbc.covid19.MainActivity;
 import edu.umbc.covid19.PrefManager;
 import edu.umbc.covid19.R;
 import edu.umbc.covid19.ble.AlarmReceiver;
 import edu.umbc.covid19.database.DBManager;
 
+import static android.content.Context.NOTIFICATION_SERVICE;
 import static edu.umbc.covid19.Constants.BUTTON_CLICKED_INTENT;
 import static edu.umbc.covid19.Constants.BUTTON_CLICKED_INTENT_STATUS;
 import static edu.umbc.covid19.Constants.INFECTED_ACTION;
@@ -71,12 +81,22 @@ public class HomeFragment extends Fragment {
 	private Switch vSwitch;
 	private Button infectedButton;
 
+	List<StoreData> storeCountList = new ArrayList<>();
 
 	private PrefManager prefManager;
 
+
+	private FirebaseDatabase mDatabase = FirebaseDatabase.getInstance();
+	private DatabaseReference mGetReference = mDatabase.getReference("storeSelect").child("count");
+
 	private DBManager dbManager;
 	private ItemCustomAdapter itemCustomAdapter;
-	ListView list_view;	public HomeFragment() {
+	private StoreCustomAdapter storeCustomAdapter;
+	ListView list_view;
+	ListView store_view;
+
+
+	public HomeFragment() {
 		super(R.layout.fragment_home);
 	}
 	List<InfectStatus> infectList = new ArrayList<>();
@@ -99,15 +119,67 @@ public class HomeFragment extends Fragment {
 		@Override
 		public void onReceive(Context context, Intent intent) {
 			if(INFECTED_ACTION.equals(intent.getAction())){
-				itemCustomAdapter.setList(intent.getExtras().getParcelableArrayList("infectData"));
+				List<InfectStatus> ll = intent.getExtras().getParcelableArrayList("infectData");
+				itemCustomAdapter.setList(ll);
 				itemCustomAdapter.notifyDataSetChanged();
+				for(InfectStatus status: ll){
+					sendNotification(status);
+				}
 
 			}
 		}
 	};
 
 	private void sendNotification(InfectStatus status){
+
+		//PendingIntent pIntent = PendingIntent.getActivity(this, (int) System.currentTimeMillis(), intent, 0);
+
+// build notification
+// the addAction re-use the same intent to keep the example short
+		NotificationManager mNotificationManager;
 		NotificationCompat.Builder mBuilder =
+				new NotificationCompat.Builder(getContext().getApplicationContext(), "notify_001");
+		Intent ii = new Intent(getContext().getApplicationContext(), MainActivity.class);
+		PendingIntent pendingIntent = PendingIntent.getActivity(getContext(), 0, ii, 0);
+
+		NotificationCompat.BigTextStyle bigText = new NotificationCompat.BigTextStyle();
+		bigText.setBigContentTitle("Warning! Possible Corona Virus infection ");
+		bigText.setSummaryText("One person reported the infection and found at location: \"+ \"\" +\". You seems to passed this person. Please take care of yourself and report if any symptoms of the Corona Virus\");\n");
+
+		mBuilder.setContentIntent(pendingIntent);
+		mBuilder.setSmallIcon(R.drawable.corona_icon);
+		mBuilder.setContentTitle("Warning! Possible Corona Virus infection");
+		mBuilder.setContentText("Distance to infected person was: "+String.format("%.2f", calculateDistance(Double.valueOf(status.getRssi())))+ " meters.");
+		mBuilder.setPriority(Notification.PRIORITY_MAX);
+		mBuilder.setStyle(bigText);
+
+		mNotificationManager =
+				(NotificationManager) getContext().getSystemService(Context.NOTIFICATION_SERVICE);
+
+// === Removed some obsoletes
+		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+		{
+			String channelId = "Your_channel_id";
+			NotificationChannel channel = new NotificationChannel(
+					channelId,
+					"Channel human readable title",
+					NotificationManager.IMPORTANCE_HIGH);
+			mNotificationManager.createNotificationChannel(channel);
+			mBuilder.setChannelId(channelId);
+		}
+
+		mNotificationManager.notify(0, mBuilder.build());
+
+		/*NotificationCompat.Builder builder = (NotificationCompat.Builder) new NotificationCompat.Builder(getActivity())
+				.setSmallIcon(R.mipmap.ic_launcher) //icon
+				.setContentTitle("Warning! Possible Corona Virus infection") //tittle
+				.setAutoCancel(true)//swipe for delete
+				.setContentText("Hello Hello"); //content
+		NotificationManager notificationManager = (NotificationManager) getActivity().getSystemService(Context.NOTIFICATION_SERVICE);
+
+		notificationManager.notify(1, builder.build()
+		);*/
+		/*NotificationCompat.Builder mBuilder =
 				new NotificationCompat.Builder(getActivity());
 
 		//Create the intent that’ll fire when the user taps the notification//
@@ -125,7 +197,12 @@ public class HomeFragment extends Fragment {
 
 				(NotificationManager) getActivity().getSystemService(Context.NOTIFICATION_SERVICE);
 
-		mNotificationManager.notify(001, mBuilder.build());
+		mNotificationManager.notify(001, mBuilder.build());*/
+	}
+
+	public double calculateDistance(double rssi) {
+
+		return Math.pow(10d, ((double) -78 - rssi) / (10 * 2));
 	}
 
 	public void initView(){
@@ -135,9 +212,16 @@ public class HomeFragment extends Fragment {
 			infectedButton.setEnabled(false);
 		}
 		list_view = (ListView) getView().findViewById(R.id.list1);
+		store_view = getView().findViewById(R.id.list2);
 		list_view.setEmptyView(getView().findViewById(R.id.emptyView));
+
+
 		itemCustomAdapter = new ItemCustomAdapter(new ArrayList<>(), getActivity());
 		list_view.setAdapter(itemCustomAdapter);
+
+		storeCustomAdapter = new StoreCustomAdapter(storeCountList,getActivity());
+		store_view.setAdapter(storeCustomAdapter);
+
 		RequestQueue queue = Volley.newRequestQueue(getActivity());
 		infectedButton.setOnClickListener(new View.OnClickListener() {
 			@Override
@@ -195,6 +279,47 @@ public class HomeFragment extends Fragment {
 				}
 			}
 		});
+
+
+		mGetReference.addChildEventListener(new ChildEventListener() {
+			@Override
+			public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+
+					StoreData d = dataSnapshot.getValue(StoreData.class);
+					storeCountList.clear();
+					storeCountList.add(d);
+					storeCustomAdapter.setList(storeCountList);
+					storeCustomAdapter.notifyDataSetChanged();
+				Log.i("TAG", "&&&&&&&&&& : "+dataSnapshot.getValue());
+
+			}
+
+			@Override
+			public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+				StoreData d = dataSnapshot.getValue(StoreData.class);
+					storeCountList.clear();
+					storeCountList.add(d);
+					storeCustomAdapter.setList(storeCountList);
+					storeCustomAdapter.notifyDataSetChanged();
+
+
+			}
+
+			@Override
+			public void onChildRemoved(DataSnapshot dataSnapshot) {
+
+			}
+
+			@Override
+			public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+
+			}
+
+			@Override
+			public void onCancelled(DatabaseError databaseError) {
+
+			}
+		});
 	}
 
 	@Override
@@ -227,7 +352,7 @@ public class HomeFragment extends Fragment {
 	private boolean isNotificationChannelEnabled(Context context, @Nullable String channelId) {
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 			if (!TextUtils.isEmpty(channelId)) {
-				NotificationManager manager = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+				NotificationManager manager = (NotificationManager) context.getSystemService(NOTIFICATION_SERVICE);
 				NotificationChannel channel = manager.getNotificationChannel(channelId);
 				if (channel == null) {
 					return true;
